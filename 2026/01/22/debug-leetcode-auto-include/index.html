@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yudongyouqing.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="本文 100% 亲测有效，3 步解决 #include &lt;bits&#x2F;stdc++.h&gt; 标红、commoncppproblem2.h 找不到等 IDE 烦恼。漂亮排版 + 完整截图，收藏不迷路！     ✨ 前置准备 安装 VS Code   建议版本 ≥ 1.85，保持新版体验更佳。   下载「Debug LeetCode」插件   商店搜索 Debug LeetCode">
+<meta property="og:type" content="article">
+<meta property="og:title" content="调试 LeetCode 之 “一键补全头文件” 超简教程">
+<meta property="og:url" content="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/index.html">
+<meta property="og:site_name" content="你好，世界">
+<meta property="og:description" content="本文 100% 亲测有效，3 步解决 #include &lt;bits&#x2F;stdc++.h&gt; 标红、commoncppproblem2.h 找不到等 IDE 烦恼。漂亮排版 + 完整截图，收藏不迷路！     ✨ 前置准备 安装 VS Code   建议版本 ≥ 1.85，保持新版体验更佳。   下载「Debug LeetCode」插件   商店搜索 Debug LeetCode">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/1.png">
+<meta property="og:image" content="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/2.png">
+<meta property="og:image" content="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/3.png">
+<meta property="article:published_time" content="2026-01-22T06:27:09.000Z">
+<meta property="article:modified_time" content="2026-01-22T07:16:51.556Z">
+<meta property="article:author" content="clearlove13">
+<meta property="article:tag" content="C++">
+<meta property="article:tag" content="LeetCode">
+<meta property="article:tag" content="VSCode">
+<meta property="article:tag" content="调试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/1.png">
+
+<link rel="canonical" href="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>调试 LeetCode 之 “一键补全头文件” 超简教程 | 你好，世界</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">你好，世界</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">充满鲜花的世界到底在哪里</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-sitemap">
+
+    <a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a>
+
+  </li>
+        <li class="menu-item menu-item-commonweal">
+
+    <a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yudongyouqing.github.io/2026/01/22/debug-leetcode-auto-include/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="clearlove13">
+      <meta itemprop="description" content="如果他真的存在那么我一定会去">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="你好，世界">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          调试 LeetCode 之 “一键补全头文件” 超简教程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-01-22 14:27:09 / 修改时间：15:16:51" itemprop="dateCreated datePublished" datetime="2026-01-22T14:27:09+08:00">2026-01-22</time>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>335</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>1 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>本文 100% 亲测有效，3 步解决 <em>#include &lt;bits&#x2F;stdc++.h&gt;</em> 标红、<code>commoncppproblem2.h</code> 找不到等 IDE 烦恼。<br>漂亮排版 + 完整截图，收藏不迷路！  </p>
+</blockquote>
+<hr>
+<h2 id="✨-前置准备"><a href="#✨-前置准备" class="headerlink" title="✨ 前置准备"></a>✨ 前置准备</h2><ol>
+<li><strong>安装 VS Code</strong>  <ul>
+<li>建议版本 ≥ <strong>1.85</strong>，保持新版体验更佳。</li>
+</ul>
+</li>
+<li><strong>下载「Debug LeetCode」插件</strong>  <ul>
+<li>商店搜索 <em>Debug LeetCode</em>，点击 <em>Install</em>。  </li>
+<li>成功后会在侧边栏看到一个 💡 的 LeetCode 图标。</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>若你尚未配置本地 C&#x2F;C++ 环境，可参考 <a target="_blank" rel="noopener" href="https://code.visualstudio.com/docs/cpp/config-mingw">官方文档</a> 进行 GCC&#x2F;Clang 安装与 <code>C/C++</code> 扩展配置。</p>
+</blockquote>
+<hr>
+<h2 id="🚀-三步搞定自动补全头文件"><a href="#🚀-三步搞定自动补全头文件" class="headerlink" title="🚀 三步搞定自动补全头文件"></a>🚀 三步搞定自动补全头文件</h2><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>截图</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Step&nbsp;1</strong></td>
+<td>打开任意 LeetCode 题目，点击顶部的 <strong>Debug</strong> 按钮</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/1.png" class="" title="点击 Debug"></td>
+</tr>
+<tr>
+<td><strong>Step&nbsp;2</strong></td>
+<td>首次运行时插件会 <strong>自动生成 main.cpp</strong>，并把缺失的系统头文件一次性补齐</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/2.png" class="" title="自动补齐头文件"></td>
+</tr>
+<tr>
+<td><strong>Step&nbsp;3</strong></td>
+<td>若仍出现 <code>#include &quot;commoncppproblem2.h&quot;</code> 的红色波浪线 —— <strong>添加 include path</strong> 即可</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/3.png" class="" title="添加 include path"></td>
+</tr>
+</tbody></table>
+<h3 id="如何添加-include-path？"><a href="#如何添加-include-path？" class="headerlink" title="如何添加 include path？"></a>如何添加 include path？</h3><ol>
+<li>打开命令面板 <code>Ctrl+Shift+P</code> → 输入并选择 <strong>C&#x2F;C++: Edit Configurations (UI)</strong>  </li>
+<li>在 <strong>Include path</strong> 中追加下列目录（替换成你自己的用户名）：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">C:\Users\&lt;YourUserName&gt;\AppData\Roaming\Code\User\globalStorage\wangtao0101.debug-leetcode</span><br></pre></td></tr></table></figure>
+
+<hr>
+<p><strong>至此，调试环境完美启用！</strong><br>如果本文对你有帮助，别忘了点赞 + 收藏 ❤。有任何问题也欢迎在评论区交流！</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/LeetCode/" rel="tag"># LeetCode</a>
+              <a href="/tags/VSCode/" rel="tag"># VSCode</a>
+              <a href="/tags/C/" rel="tag"># C++</a>
+              <a href="/tags/%E8%B0%83%E8%AF%95/" rel="tag"># 调试</a>
+          </div>
+
+        
+
+
+        
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E2%9C%A8-%E5%89%8D%E7%BD%AE%E5%87%86%E5%A4%87"><span class="nav-number">1.</span> <span class="nav-text">✨ 前置准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%F0%9F%9A%80-%E4%B8%89%E6%AD%A5%E6%90%9E%E5%AE%9A%E8%87%AA%E5%8A%A8%E8%A1%A5%E5%85%A8%E5%A4%B4%E6%96%87%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">🚀 三步搞定自动补全头文件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E6%B7%BB%E5%8A%A0-include-path%EF%BC%9F"><span class="nav-number">2.1.</span> <span class="nav-text">如何添加 include path？</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="clearlove13"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">clearlove13</p>
+  <div class="site-description" itemprop="description">如果他真的存在那么我一定会去</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">clearlove13</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">0k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">1 分钟</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
