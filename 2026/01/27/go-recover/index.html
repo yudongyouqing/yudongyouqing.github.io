@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yudongyouqing.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="很多 Go 初学者第一次遇到 panic 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：用 recover 可以救回来。 但 recover 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 panic &#x2F; defer &#x2F; recover 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go 里的 recover：如何优雅地兜底 panic（写给初学者）">
+<meta property="og:url" content="https://yudongyouqing.github.io/2026/01/27/go-recover/">
+<meta property="og:site_name" content="你好，世界">
+<meta property="og:description" content="很多 Go 初学者第一次遇到 panic 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：用 recover 可以救回来。 但 recover 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 panic &#x2F; defer &#x2F; recover 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-27T14:00:00.000Z">
+<meta property="article:modified_time" content="2026-01-27T14:21:43.047Z">
+<meta property="article:author" content="clearlove13">
+<meta property="article:tag" content="Go">
+<meta property="article:tag" content="defer">
+<meta property="article:tag" content="panic">
+<meta property="article:tag" content="recover">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yudongyouqing.github.io/2026/01/27/go-recover/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Go 里的 recover：如何优雅地兜底 panic（写给初学者） | 你好，世界</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">你好，世界</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">充满鲜花的世界到底在哪里</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yudongyouqing.github.io/2026/01/27/go-recover/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="clearlove13">
+      <meta itemprop="description" content="如果他真的存在那么我一定会去">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="你好，世界">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go 里的 recover：如何优雅地兜底 panic（写给初学者）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-01-27 22:00:00 / 修改时间：22:21:43" itemprop="dateCreated datePublished" datetime="2026-01-27T22:00:00+08:00">2026-01-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index"><span itemprop="name">Go</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>1k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>4 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>很多 Go 初学者第一次遇到 <code>panic</code> 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：<strong>用 <code>recover</code> 可以救回来</strong>。</p>
+<p>但 <code>recover</code> 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 <code>panic / defer / recover</code> 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。</p>
+<span id="more"></span>
+
+<h2 id="1-panic-defer-recover-到底是什么关系？"><a href="#1-panic-defer-recover-到底是什么关系？" class="headerlink" title="1. panic &#x2F; defer &#x2F; recover 到底是什么关系？"></a>1. panic &#x2F; defer &#x2F; recover 到底是什么关系？</h2><ul>
+<li><p><strong>panic</strong></p>
+<ul>
+<li>让当前 goroutine 进入异常流程：从当前函数开始向上“展开调用栈”（stack unwinding）</li>
+<li>在展开过程中，会执行每一层函数里注册的 <code>defer</code></li>
+</ul>
+</li>
+<li><p><strong>defer</strong></p>
+<ul>
+<li>延迟执行：函数返回前执行</li>
+<li>发生 <code>panic</code> 时也会执行（这是 <code>recover</code> 能工作的原因）</li>
+</ul>
+</li>
+<li><p><strong>recover</strong></p>
+<ul>
+<li>作用：在 <code>panic</code> 发生后，把 <code>panic</code> 的值取出来，并<strong>阻止程序继续崩溃</strong></li>
+<li><strong>只能在 <code>defer</code> 调用的函数里生效</strong>，否则返回 <code>nil</code></li>
+</ul>
+</li>
+</ul>
+<p>一句话总结：<br><strong>panic 触发异常 -&gt; defer 仍会执行 -&gt; defer 里调用 recover 才能捕获并兜底。</strong></p>
+<h2 id="2-最小可运行示例：recover-正确写法"><a href="#2-最小可运行示例：recover-正确写法" class="headerlink" title="2. 最小可运行示例：recover 正确写法"></a>2. 最小可运行示例：recover 正确写法</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;捕获到 panic:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	fmt.Println(<span class="string">&quot;before panic&quot;</span>)</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;something bad happened&quot;</span>)</span><br><span class="line">	fmt.Println(<span class="string">&quot;after panic (不会执行)&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行输出类似：</p>
+<ul>
+<li><code>before panic</code></li>
+<li><code>捕获到 panic: something bad happened</code></li>
+</ul>
+<p>注意：<code>panic</code> 之后的那行 <code>after panic</code> 不会执行，因为控制流已经进入 panic 展开流程了。</p>
+<h2 id="3-常见误区-1：不在-defer-里调用-recover-——-永远抓不到"><a href="#3-常见误区-1：不在-defer-里调用-recover-——-永远抓不到" class="headerlink" title="3. 常见误区 1：不在 defer 里调用 recover —— 永远抓不到"></a>3. 常见误区 1：不在 defer 里调用 recover —— 永远抓不到</h2><p>很多人会写成这样：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">recover</span>() <span class="comment">// 没用</span></span><br><span class="line"><span class="built_in">panic</span>(<span class="string">&quot;x&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>或者这样：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">()</span></span> &#123;</span><br><span class="line">	r := <span class="built_in">recover</span>() <span class="comment">// 没用</span></span><br><span class="line">	fmt.Println(r)</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;x&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>原因：<code>recover</code> 必须在 panic 展开过程中被调用，而展开过程只会执行 <code>defer</code>，所以必须写在 <code>defer func(){...}()</code> 里。</p>
+<h2 id="4-常见误区-2：recover-只能抓“同一个-goroutine”的-panic"><a href="#4-常见误区-2：recover-只能抓“同一个-goroutine”的-panic" class="headerlink" title="4. 常见误区 2：recover 只能抓“同一个 goroutine”的 panic"></a>4. 常见误区 2：recover 只能抓“同一个 goroutine”的 panic</h2><p>下面这种情况非常常见：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;main recover:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;panic in goroutine&quot;</span>)</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	time.Sleep(time.Second)</span><br><span class="line">	fmt.Println(<span class="string">&quot;main exit&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>main</code> 的 <code>recover</code> <strong>抓不到</strong>子 goroutine 的 panic。子 goroutine panic 会直接把整个进程打挂（如果没人兜底）。</p>
+<p>正确方式：<strong>在每个 goroutine 的入口处兜底</strong>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;goroutine recover:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;panic in goroutine&quot;</span>)</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-常见误区-3：recover-后不是“从-panic-那行继续往下跑”"><a href="#5-常见误区-3：recover-后不是“从-panic-那行继续往下跑”" class="headerlink" title="5. 常见误区 3：recover 后不是“从 panic 那行继续往下跑”"></a>5. 常见误区 3：recover 后不是“从 panic 那行继续往下跑”</h2><p><code>recover</code> 只是把 <code>panic</code> 截住，让程序不至于崩溃。</p>
+<p>但它并不会让函数回到 <code>panic()</code> 那一行继续执行；<code>panic</code> 所在函数会走“返回路径”，相当于提前结束了当前执行流。</p>
+<p>所以 <code>recover</code> 更像：</p>
+<ul>
+<li>兜底 + 收尾 + 记录 + 返回默认值&#x2F;错误</li>
+</ul>
+<p>而不是：</p>
+<ul>
+<li>异常发生了，但当作没发生一样继续跑</li>
+</ul>
+<h2 id="6-recover-到底该怎么用才合理？"><a href="#6-recover-到底该怎么用才合理？" class="headerlink" title="6. recover 到底该怎么用才合理？"></a>6. recover 到底该怎么用才合理？</h2><h3 id="6-1-建议只在“边界层”兜底（框架-入口）"><a href="#6-1-建议只在“边界层”兜底（框架-入口）" class="headerlink" title="6.1 建议只在“边界层”兜底（框架&#x2F;入口）"></a>6.1 建议只在“边界层”兜底（框架&#x2F;入口）</h3><p>比如：</p>
+<ul>
+<li>HTTP handler 的最外层</li>
+<li>消费队列&#x2F;定时任务 worker 的最外层</li>
+<li>goroutine 的入口函数</li>
+</ul>
+<p>原因：</p>
+<ul>
+<li><code>panic</code> 往往代表程序员错误或不变式被破坏</li>
+<li>在业务逻辑里用 recover 把 panic 吞掉，会隐藏问题，导致“悄悄错了但没报警”</li>
+</ul>
+<h3 id="6-2-兜底时应该做什么？"><a href="#6-2-兜底时应该做什么？" class="headerlink" title="6.2 兜底时应该做什么？"></a>6.2 兜底时应该做什么？</h3><p>至少做三件事：</p>
+<ul>
+<li>记录 panic 的值</li>
+<li>记录堆栈（非常重要）</li>
+<li>让调用方得到合理响应（返回错误&#x2F;默认值&#x2F;500）</li>
+</ul>
+<p>下面是一个通用的 recover 包装函数（示例）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;runtime/debug&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">safeGo</span><span class="params">(fn <span class="keyword">func</span>()</span></span>) &#123;</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">			<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">				fmt.Printf(<span class="string">&quot;panic: %v\nstack:\n%s\n&quot;</span>, r, debug.Stack())</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;()</span><br><span class="line">		fn()</span><br><span class="line">	&#125;()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	safeGo(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;boom&quot;</span>)</span><br><span class="line">	&#125;)</span><br><span class="line">	<span class="keyword">select</span> &#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="7-panic-和-error-怎么选？（给初学者的简单规则）"><a href="#7-panic-和-error-怎么选？（给初学者的简单规则）" class="headerlink" title="7. panic 和 error 怎么选？（给初学者的简单规则）"></a>7. panic 和 error 怎么选？（给初学者的简单规则）</h2><ul>
+<li>用 <code>error</code>：可预期的失败（参数不合法、网络超时、文件不存在、权限不足）</li>
+<li>用 <code>panic</code>：不可恢复的程序错误&#x2F;不变式破坏（数组越界、空指针、并发写 map、逻辑必然不该发生）</li>
+<li>用 <code>recover</code>：只在边界层兜底，避免单个请求&#x2F;任务把整个进程打挂，同时保留日志和堆栈，便于修 bug</li>
+</ul>
+<h2 id="8-小结"><a href="#8-小结" class="headerlink" title="8. 小结"></a>8. 小结</h2><ul>
+<li><code>recover</code> 必须在 <code>defer</code> 里才有效</li>
+<li><code>recover</code> 只能捕获同一 goroutine 的 panic</li>
+<li>recover 的正确价值：兜底、防崩溃、打日志、保留堆栈、让系统可用</li>
+<li>日常业务错误处理：优先 <code>error</code>，不要靠 <code>panic/recover</code> 当“异常机制”</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+  <div id="giscus"></div>
+  <script src="https://giscus.app/client.js"
+          data-repo="yudongyouqing/yudongyouqing.github.io"
+          data-repo-id="R_kgDOQ-xeoQ"
+          data-category="General"
+          data-category-id="DIC_kwDOQ-xeoc4C1UgL"
+          data-mapping="pathname"
+          data-strict="0"
+          data-reactions-enabled="1"
+          data-emit-metadata="0"
+          data-input-position="top"
+          data-theme="preferred_color_scheme"
+          data-lang="zh-CN"
+          data-loading="lazy"
+          crossorigin="anonymous"
+          async>
+  </script>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Go/" rel="tag"># Go</a>
+              <a href="/tags/panic/" rel="tag"># panic</a>
+              <a href="/tags/recover/" rel="tag"># recover</a>
+              <a href="/tags/defer/" rel="tag"># defer</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/01/23/go-context/" rel="prev" title="GO标准库中的context包">
+      <i class="fa fa-chevron-left"></i> GO标准库中的context包
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-panic-defer-recover-%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E5%85%B3%E7%B3%BB%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">1. panic &#x2F; defer &#x2F; recover 到底是什么关系？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%9C%80%E5%B0%8F%E5%8F%AF%E8%BF%90%E8%A1%8C%E7%A4%BA%E4%BE%8B%EF%BC%9Arecover-%E6%AD%A3%E7%A1%AE%E5%86%99%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">2. 最小可运行示例：recover 正确写法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA-1%EF%BC%9A%E4%B8%8D%E5%9C%A8-defer-%E9%87%8C%E8%B0%83%E7%94%A8-recover-%E2%80%94%E2%80%94-%E6%B0%B8%E8%BF%9C%E6%8A%93%E4%B8%8D%E5%88%B0"><span class="nav-number">3.</span> <span class="nav-text">3. 常见误区 1：不在 defer 里调用 recover —— 永远抓不到</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA-2%EF%BC%9Arecover-%E5%8F%AA%E8%83%BD%E6%8A%93%E2%80%9C%E5%90%8C%E4%B8%80%E4%B8%AA-goroutine%E2%80%9D%E7%9A%84-panic"><span class="nav-number">4.</span> <span class="nav-text">4. 常见误区 2：recover 只能抓“同一个 goroutine”的 panic</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA-3%EF%BC%9Arecover-%E5%90%8E%E4%B8%8D%E6%98%AF%E2%80%9C%E4%BB%8E-panic-%E9%82%A3%E8%A1%8C%E7%BB%A7%E7%BB%AD%E5%BE%80%E4%B8%8B%E8%B7%91%E2%80%9D"><span class="nav-number">5.</span> <span class="nav-text">5. 常见误区 3：recover 后不是“从 panic 那行继续往下跑”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-recover-%E5%88%B0%E5%BA%95%E8%AF%A5%E6%80%8E%E4%B9%88%E7%94%A8%E6%89%8D%E5%90%88%E7%90%86%EF%BC%9F"><span class="nav-number">6.</span> <span class="nav-text">6. recover 到底该怎么用才合理？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%BB%BA%E8%AE%AE%E5%8F%AA%E5%9C%A8%E2%80%9C%E8%BE%B9%E7%95%8C%E5%B1%82%E2%80%9D%E5%85%9C%E5%BA%95%EF%BC%88%E6%A1%86%E6%9E%B6-%E5%85%A5%E5%8F%A3%EF%BC%89"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 建议只在“边界层”兜底（框架&#x2F;入口）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%85%9C%E5%BA%95%E6%97%B6%E5%BA%94%E8%AF%A5%E5%81%9A%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 兜底时应该做什么？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-panic-%E5%92%8C-error-%E6%80%8E%E4%B9%88%E9%80%89%EF%BC%9F%EF%BC%88%E7%BB%99%E5%88%9D%E5%AD%A6%E8%80%85%E7%9A%84%E7%AE%80%E5%8D%95%E8%A7%84%E5%88%99%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">7. panic 和 error 怎么选？（给初学者的简单规则）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%B0%8F%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">8. 小结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="clearlove13"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">clearlove13</p>
+  <div class="site-description" itemprop="description">如果他真的存在那么我一定会去</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yudongyouqing" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yudongyouqing" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://www.cnblogs.com/clearlove13" title="https:&#x2F;&#x2F;www.cnblogs.com&#x2F;clearlove13" rel="noopener" target="_blank">博客园</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://blog.csdn.net/2302_78965086?spm=1000.2115.3001.5343" title="https:&#x2F;&#x2F;blog.csdn.net&#x2F;2302_78965086?spm&#x3D;1000.2115.3001.5343" rel="noopener" target="_blank">CSDN</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">clearlove13</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">3k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9 分钟</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+
+<style>
+  .busuanzi-count,
+  #busuanzi_container_site_uv,
+  #busuanzi_container_site_pv {
+    display: inline !important;
+  }
+  .footer-extra {
+    display: block;
+    margin-top: 10px;
+  }
+  .footer-runtime {
+    display: block;
+    margin-bottom: 5px;
+  }
+  .footer-stats {
+    display: block;
+  }
+</style>
+<div class="footer-extra">
+  <div class="footer-runtime">
+    <span id="site_runtime_days">载入天数...</span>
+    <span id="site_runtime_time">载入时分秒...</span>
+  </div>
+  <div class="footer-stats">
+    
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv">-</span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv">-</span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var start = new Date('2026-01-22T10:00:00+08:00'); // 修改为你的建站时间（北京时间）
+    var elDays = document.getElementById('site_runtime_days');
+    var elTime = document.getElementById('site_runtime_time');
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+      var now = new Date();
+      var diff = Math.max(0, now - start);
+      var days = Math.floor(diff / 86400000);
+      var hours = Math.floor(diff / 3600000) % 24;
+      var mins = Math.floor(diff / 60000) % 60;
+      var secs = Math.floor(diff / 1000) % 60;
+      if (elDays) elDays.textContent = '本站已安全运行 ' + days + ' 天';
+      if (elTime) elTime.textContent = pad(hours) + ' 小时 ' + pad(mins) + ' 分 ' + pad(secs) + ' 秒';
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
