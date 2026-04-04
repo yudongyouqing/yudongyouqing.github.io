@@ -11,15 +11,6 @@
   </url>
   
   <url>
-    <loc>https://yudongyouqing.github.io/2026/04/04/web-doc-template/</loc>
-    
-    <lastmod>2026-04-03</lastmod>
-    
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://yudongyouqing.github.io/2026/01/23/go-context/</loc>
     
     <lastmod>2026-01-27</lastmod>
@@ -92,27 +83,6 @@
 
   
   <url>
-    <loc>https://yudongyouqing.github.io/tags/LeetCode/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://yudongyouqing.github.io/tags/VSCode/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://yudongyouqing.github.io/tags/C/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://yudongyouqing.github.io/tags/Go/</loc>
     <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
@@ -128,6 +98,27 @@
   
   <url>
     <loc>https://yudongyouqing.github.io/tags/context/</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://yudongyouqing.github.io/tags/LeetCode/</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://yudongyouqing.github.io/tags/VSCode/</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://yudongyouqing.github.io/tags/C/</loc>
     <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -154,28 +145,7 @@
     <priority>0.2</priority>
   </url>
   
-  <url>
-    <loc>https://yudongyouqing.github.io/tags/WebDoc/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://yudongyouqing.github.io/tags/%E6%A8%A1%E6%9D%BF/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
 
-  
-  <url>
-    <loc>https://yudongyouqing.github.io/categories/%E5%88%B7%E9%A2%98/</loc>
-    <lastmod>2026-04-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
   
   <url>
     <loc>https://yudongyouqing.github.io/categories/Go/</loc>
@@ -185,7 +155,7 @@
   </url>
   
   <url>
-    <loc>https://yudongyouqing.github.io/categories/%E7%BD%91%E9%A1%B5%E6%96%87%E6%A1%A3/</loc>
+    <loc>https://yudongyouqing.github.io/categories/%E5%88%B7%E9%A2%98/</loc>
     <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
