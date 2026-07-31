@@ -1,0 +1,374 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库 | Can you fell my world</title><meta name="author" content="clearlove13"><meta name="copyright" content="clearlove13"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="原文链接：RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归 这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？ 我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，LLM + grep&#x2F;ripgrep + 文件读取 这种动态检索方式，很多时候比">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库">
+<meta property="og:url" content="https://yudongyouqing.github.io/2026/05/25/rag-grep-claude-code/">
+<meta property="og:site_name" content="Can you fell my world">
+<meta property="og:description" content="原文链接：RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归 这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？ 我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，LLM + grep&#x2F;ripgrep + 文件读取 这种动态检索方式，很多时候比">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yudongyouqing.github.io/images/avatar.jpg">
+<meta property="article:published_time" content="2026-05-25T05:23:36.000Z">
+<meta property="article:modified_time" content="2026-07-29T02:37:47.096Z">
+<meta property="article:author" content="clearlove13">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Claude Code">
+<meta property="article:tag" content="RAG">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yudongyouqing.github.io/images/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库",
+  "url": "https://yudongyouqing.github.io/2026/05/25/rag-grep-claude-code/",
+  "image": "https://yudongyouqing.github.io/images/avatar.jpg",
+  "datePublished": "2026-05-25T05:23:36.000Z",
+  "dateModified": "2026-07-29T02:37:47.096Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "clearlove13",
+      "url": "https://yudongyouqing.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/images/avatar.jpg"><link rel="canonical" href="https://yudongyouqing.github.io/2026/05/25/rag-grep-claude-code/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css?v=20260617"><meta name="generator" content="Hexo 8.1.1"></head><body><div class="bg-animation" id="web_bg" style="background-color: #f7f9fc;"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">21</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/images/home-sunset.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Can you fell my world</span></a><a class="nav-page-title" href="/"><span class="site-name">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-25T05:23:36.000Z" title="发表于 2026-05-25 13:23:36">2026-05-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-29T02:37:47.096Z" title="更新于 2026-07-29 10:37:47">2026-07-29</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/AI/">AI</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>原文链接：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/2028510583213835970">RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归</a></p>
+<p>这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？</p>
+<p>我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，<code>LLM + grep/ripgrep + 文件读取</code> 这种动态检索方式，很多时候比“提前切分、向量化、建索引”的传统 RAG 更直接。</p>
+<span id="more"></span>
+
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>传统 RAG 的典型流程是：</p>
+<ol>
+<li>把资料切成 chunk。</li>
+<li>对 chunk 做 embedding。</li>
+<li>存到向量库。</li>
+<li>用户提问时先召回相似片段。</li>
+<li>再把片段塞给模型生成回答。</li>
+</ol>
+<p>这个流程在知识库问答里很常见，但放到代码库里会遇到几个问题：</p>
+<ul>
+<li>代码变化很快，索引很容易过期。</li>
+<li>chunk 切分可能破坏函数、类、调用链的完整语义。</li>
+<li>向量相似度不一定能准确命中真实入口。</li>
+<li>检索出来的内容仍然需要模型继续判断是否相关。</li>
+</ul>
+<p>而 Claude Code 这类工具更像一个会使用命令行的程序员：先看目录，再用关键词搜索，再读文件，再顺着调用关系继续追。它不是一次性“召回答案”，而是边查边缩小范围。</p>
+<h2 id="为什么代码库适合-grep"><a href="#为什么代码库适合-grep" class="headerlink" title="为什么代码库适合 grep"></a>为什么代码库适合 grep</h2><p>代码和普通自然语言文档不一样。</p>
+<p>普通文档里，同一个意思可能有很多说法。比如“登录失败”“认证异常”“账号校验不通过”可能指向同一类问题。这个时候，embedding 的语义相似度有价值。</p>
+<p>但代码里有大量明确锚点：</p>
+<ul>
+<li>文件名</li>
+<li>函数名</li>
+<li>类名</li>
+<li>变量名</li>
+<li>API 路径</li>
+<li>错误信息</li>
+<li>配置项</li>
+<li>日志关键字</li>
+</ul>
+<p>这些东西本来就是程序员为了可维护性留下的索引。你要找 <code>login failed</code>，直接搜错误字符串；你要找接口处理逻辑，搜路由；你要找某个配置怎么生效，搜配置 key。很多时候，字面搜索已经足够精确。</p>
+<p>所以对代码库来说，真正重要的不是“有没有一个向量库”，而是模型能不能提出好搜索词，并且能不能根据搜索结果继续追踪上下文。</p>
+<h2 id="Agentic-Search-和传统-RAG-的差别"><a href="#Agentic-Search-和传统-RAG-的差别" class="headerlink" title="Agentic Search 和传统 RAG 的差别"></a>Agentic Search 和传统 RAG 的差别</h2><p>我觉得文章里最关键的点是：Claude Code 的检索不是一次性的，而是 agentic search。</p>
+<p>传统 RAG 更像：</p>
+<blockquote>
+<p>先把可能相关的资料找出来，再回答。</p>
+</blockquote>
+<p>Agentic search 更像：</p>
+<blockquote>
+<p>先提出一个搜索假设，执行搜索，阅读结果，再决定下一步查哪里。</p>
+</blockquote>
+<p>这个过程更接近真实开发者的工作方式：</p>
+<ol>
+<li>先用 <code>rg</code> 搜一个关键字。</li>
+<li>看命中的文件名和上下文。</li>
+<li>判断哪个文件像入口。</li>
+<li>打开文件读实现。</li>
+<li>顺着 import、调用链、类型定义继续查。</li>
+<li>最后形成对问题的判断。</li>
+</ol>
+<p>这种方式的优势是实时、可解释、成本低。它不需要提前维护索引，也不会因为代码刚改完但向量库没更新而查到旧内容。</p>
+<h2 id="但这不是说-RAG-已死"><a href="#但这不是说-RAG-已死" class="headerlink" title="但这不是说 RAG 已死"></a>但这不是说 RAG 已死</h2><p>标题里的“RAG 已死”更像是一种问题意识，不应该理解成绝对结论。</p>
+<p>RAG 仍然有适用场景：</p>
+<ul>
+<li>大量自然语言文档检索。</li>
+<li>用户问题和原文用词差异很大。</li>
+<li>需要跨文档语义归纳。</li>
+<li>资料更新频率较低，可以接受提前建索引。</li>
+<li>需要在海量资料中做粗召回。</li>
+</ul>
+<p>代码库检索只是一个特殊场景。它的特点是结构强、命名密集、变更频繁、局部上下文重要。因此，对它来说，轻量的本地搜索经常比重型 RAG 更实用。</p>
+<p>更准确的说法应该是：RAG 不是死了，而是不能无脑套到所有检索问题上。</p>
+<h2 id="对我写代码的启发"><a href="#对我写代码的启发" class="headerlink" title="对我写代码的启发"></a>对我写代码的启发</h2><p>这篇文章给我的启发是：做 AI 工具时，不要一上来就默认“需要向量数据库”。</p>
+<p>应该先问几个更底层的问题：</p>
+<ul>
+<li>数据是不是天然有明确关键词？</li>
+<li>数据是不是变化非常频繁？</li>
+<li>用户的问题是否能转成精确搜索条件？</li>
+<li>检索结果是否需要可解释路径？</li>
+<li>维护索引的成本是否高于收益？</li>
+</ul>
+<p>如果答案偏向“是”，那 <code>grep/ripgrep + 文件读取 + 多轮推理</code> 可能就是更合适的第一版方案。</p>
+<p>尤其在编程 Agent 里，工具调用能力比单纯 embedding 更关键。模型真正需要的不是一次性拿到一堆“看起来相似”的片段，而是像开发者一样，有能力逐步定位、验证、排除和追踪。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这篇文章的价值不在于证明 RAG 没用了，而在于提醒我们：检索方案要服务于数据形态。</p>
+<p>自然语言知识库适合语义召回，代码库则天然适合精确搜索和上下文追踪。Claude Code 选择 grep&#x2F;ripgrep，并不是技术倒退，而是回到了一个很朴素的工程判断：能用简单、实时、可解释的方法解决问题，就不要先引入复杂系统。</p>
+<p>对代码检索来说，最强的方案未必是“向量库优先”，而是“让模型学会像工程师一样搜索”。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io">clearlove13</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io/2026/05/25/rag-grep-claude-code/">https://yudongyouqing.github.io/2026/05/25/rag-grep-claude-code/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://yudongyouqing.github.io" target="_blank">Can you fell my world</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agent/">Agent</a><a class="post-meta__tags" href="/tags/RAG/">RAG</a><a class="post-meta__tags" href="/tags/Claude-Code/">Claude Code</a></div><div class="post-share"><div class="social-share" data-image="/images/avatar.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</div></div><div class="info-2"><div class="info-item-1">原文链接：用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层 这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。   先说结论我理解这篇文章的重点有三个：  Agent 需要的不是一次性 RAG，而是长期可维护的知识层。 检索不应该只靠向量，grep + 向量 + 图谱扩展 可以互相补失败模式。 中文技术知识里，精确词、缩写、同义词和领域术语非常重要，不能盲目相信 embedding。  传统 RAG 更像“问一次，临时找资料，再回答”。LLM Wiki 的思路更像“先把知识编译成一个持续增长的代码库”。每次新增资料，不只是存进去，而是要抽取概念、建立链接、更新索引，让后续检索和推理都能复用这部分沉淀。 LLM Wiki 的关键变化Karpathy 的 LLM Wiki 有一个很有意思的比喻：  Obsidian 类似 IDE。 Wiki 类似代码库。 LLM 类似程序员。  ...</div></div></div></a><a class="pagination-related" href="/2026/01/27/go-recover/" title="Go 里的 recover：如何优雅地兜底 panic（写给初学者）"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Go 里的 recover：如何优雅地兜底 panic（写给初学者）</div></div><div class="info-2"><div class="info-item-1">很多 Go 初学者第一次遇到 panic 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：用 recover 可以救回来。 但 recover 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 panic / defer / recover 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。   1. panic &#x2F; defer &#x2F; recover 到底是什么关系？ panic  让当前 goroutine 进入异常流程：从当前函数开始向上“展开调用栈”（stack unwinding） 在展开过程中，会执行每一层函数里注册的 defer   defer  延迟执行：函数返回前执行 发生 panic 时也会执行（这是 recover 能工作的原因）   recover  作用：在 panic 发生后，把 panic 的值取出来，并阻止程序继续崩溃 只能在 defer 调用的函数里生效，否则返回 nil    一句话总结：panic 触发异常 -&gt; defer 仍会执行 -&gt; defer 里调用 recover...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</div></div><div class="info-2"><div class="info-item-1">原文链接：用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层 这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。   先说结论我理解这篇文章的重点有三个：  Agent 需要的不是一次性 RAG，而是长期可维护的知识层。 检索不应该只靠向量，grep + 向量 + 图谱扩展 可以互相补失败模式。 中文技术知识里，精确词、缩写、同义词和领域术语非常重要，不能盲目相信 embedding。  传统 RAG 更像“问一次，临时找资料，再回答”。LLM Wiki 的思路更像“先把知识编译成一个持续增长的代码库”。每次新增资料，不只是存进去，而是要抽取概念、建立链接、更新索引，让后续检索和推理都能复用这部分沉淀。 LLM Wiki 的关键变化Karpathy 的 LLM Wiki 有一个很有意思的比喻：  Obsidian 类似 IDE。 Wiki 类似代码库。 LLM 类似程序员。  ...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">clearlove13</div><div class="author-info-description">Golang 后端开发 / 技术爱好者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">21</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yudongyouqing"><i class="fab fa-github"></i><span>GitHub</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">记录技术学习、调试经验和文档收藏。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA"><span class="toc-number">1.</span> <span class="toc-text">先说结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%A3%E7%A0%81%E5%BA%93%E9%80%82%E5%90%88-grep"><span class="toc-number">2.</span> <span class="toc-text">为什么代码库适合 grep</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Agentic-Search-%E5%92%8C%E4%BC%A0%E7%BB%9F-RAG-%E7%9A%84%E5%B7%AE%E5%88%AB"><span class="toc-number">3.</span> <span class="toc-text">Agentic Search 和传统 RAG 的差别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%86%E8%BF%99%E4%B8%8D%E6%98%AF%E8%AF%B4-RAG-%E5%B7%B2%E6%AD%BB"><span class="toc-number">4.</span> <span class="toc-text">但这不是说 RAG 已死</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E6%88%91%E5%86%99%E4%BB%A3%E7%A0%81%E7%9A%84%E5%90%AF%E5%8F%91"><span class="toc-number">5.</span> <span class="toc-text">对我写代码的启发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">小结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账">一个流水水水水账</a><time datetime="2026-06-15T16:00:00.000Z" title="发表于 2026-06-16 00:00:00">2026-06-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法">中文分词-最大匹配算法</a><time datetime="2026-06-04T13:31:33.000Z" title="发表于 2026-06-04 21:31:33">2026-06-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</a><time datetime="2026-05-25T06:42:31.000Z" title="发表于 2026-05-25 14:42:31">2026-05-25</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/25/rag-grep-claude-code/" title="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</a><time datetime="2026-05-25T05:23:36.000Z" title="发表于 2026-05-25 13:23:36">2026-05-25</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/01/27/go-recover/" title="Go 里的 recover：如何优雅地兜底 panic（写给初学者）">Go 里的 recover：如何优雅地兜底 panic（写给初学者）</a><time datetime="2026-01-27T14:00:00.000Z" title="发表于 2026-01-27 22:00:00">2026-01-27</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/images/home-sunset.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2026 By clearlove13</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN","data-mapping":"pathname","data-input-position":"top","data-reactions-enabled":1}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'yudongyouqing/yudongyouqing.github.io',
+      'data-repo-id': 'R_kgDOQ-xeoQ',
+      'data-category-id': 'DIC_kwDOQ-xeoc4C1UgL',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script src="/js/footer-bg.js"></script><script src="/js/music-player.js?v=20260617-cover"></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
