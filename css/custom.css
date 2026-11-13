@@ -689,3 +689,40 @@ body {
   opacity: 1;
   transform: translate(0, 0);
 }
+
+/* ===== 阅读模式右上角控制组：A+ / A− / 明暗（配套 /js/readmode-extras.js）===== */
+.am-fs-wrap {
+  position: fixed;
+  top: 136px;
+  right: 30px;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+body.read-mode .am-fs-wrap {
+  display: flex;
+}
+.am-fs-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #c0c0c0;
+  color: #fff;
+  font-size: 14px;
+  line-height: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.am-fs-btn:hover {
+  background: #a0a0a0;
+}
+[data-theme='dark'] .am-fs-btn {
+  background: #1f1f1f;
+  color: rgba(255, 255, 255, 0.9);
+}
+[data-theme='dark'] .am-fs-btn:hover {
+  background: #333;
+}
