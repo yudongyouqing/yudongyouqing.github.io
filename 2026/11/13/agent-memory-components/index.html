@@ -1,0 +1,570 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>智能体记忆的组成部分 | Can you fell my world</title><meta name="robots" content="noindex"><meta name="author" content="clearlove13"><meta name="copyright" content="clearlove13"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="#article-container p.agent-memory-en {   color: var(--font-color);   opacity: 0.68;   font-size: 0.88em;   line-height: 1.85;   margin-top: -0.45em;   margin-bottom: 2.2em; } #article-container .agen">
+<meta property="og:type" content="article">
+<meta property="og:title" content="智能体记忆的组成部分">
+<meta property="og:url" content="https://yudongyouqing.github.io/2026/11/13/agent-memory-components/">
+<meta property="og:site_name" content="Can you fell my world">
+<meta property="og:description" content="#article-container p.agent-memory-en {   color: var(--font-color);   opacity: 0.68;   font-size: 0.88em;   line-height: 1.85;   margin-top: -0.45em;   margin-bottom: 2.2em; } #article-container .agen">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yudongyouqing.github.io/images/avatar.jpg">
+<meta property="article:published_time" content="2026-11-13T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-11-13T02:59:35.908Z">
+<meta property="article:author" content="clearlove13">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Claude">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yudongyouqing.github.io/images/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "智能体记忆的组成部分",
+  "url": "https://yudongyouqing.github.io/2026/11/13/agent-memory-components/",
+  "image": "https://yudongyouqing.github.io/images/avatar.jpg",
+  "datePublished": "2026-11-13T02:00:00.000Z",
+  "dateModified": "2026-11-13T02:59:35.908Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "clearlove13",
+      "url": "https://yudongyouqing.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/images/avatar.jpg"><link rel="canonical" href="https://yudongyouqing.github.io/2026/11/13/agent-memory-components/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '智能体记忆的组成部分',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css?v=20261113b"><meta name="generator" content="Hexo 8.1.1"></head><body><div class="bg-animation" id="web_bg" style="background-color: #f7f9fc;"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">9</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/images/home-sunset.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Can you fell my world</span></a><a class="nav-page-title" href="/"><span class="site-name">智能体记忆的组成部分</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">智能体记忆的组成部分</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-11-13T02:00:00.000Z" title="发表于 2026-11-13 10:00:00">2026-11-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-13T02:59:35.908Z" title="更新于 2026-11-13 10:59:35">2026-11-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%BF%BB%E8%AF%91/">翻译</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><style>
+#article-container p.agent-memory-en {
+  color: var(--font-color);
+  opacity: 0.68;
+  font-size: 0.88em;
+  line-height: 1.85;
+  margin-top: -0.45em;
+  margin-bottom: 2.2em;
+}
+#article-container .agent-memory-code { font-family: monospace; }
+#article-container .agent-memory-em { font-style: italic; }
+#article-container .agent-memory-note { color: var(--font-color); opacity: 0.72; font-size: 0.85em; }
+.card-toc .toc-number { display: none; }
+</style>
+
+<img src="/2026/11/13/agent-memory-components/cover.webp" class="" title="原文头图：两个错开的半圆，绿色与粉色，隔着一段空隙相对">
+
+<p>这是 Anthropic 2026 年 11 月发布的一篇研究文章，介绍智能体记忆的组成，以及离线整理记忆的「做梦」机制。文章通过数据库问答、宝可梦游戏和文档检索等评估，探讨记忆的创建、组织与纠错。</p>
+<p>原文：<a target="_blank" rel="noopener" href="https://www.anthropic.com/research/components-of-agent-memory">The components of agent memory</a></p>
+<span id="more"></span>
+
+<h2 id="1-开篇：生命只能回望时被理解，却必须向前活"><a href="#1-开篇：生命只能回望时被理解，却必须向前活" class="headerlink" title="1. 开篇：生命只能回望时被理解，却必须向前活"></a>1. 开篇：生命只能回望时被理解，却必须向前活</h2><blockquote>
+<p>克尔凯郭尔（Søren Kierkegaard）曾写道：生命只能回望时被理解，却必须向前活。我们在为 AI 智能体设计记忆时，也遇到了同样的困境。</p>
+</blockquote>
+<p class="agent-memory-en" lang="en">Søren Kierkegaard wrote that life can only be understood <span class="agent-memory-em">backward</span>, but it must be lived <span class="agent-memory-em">forward</span>. We've encountered a similar bind when designing memory for AI agents.</p>
+
+<p>作为人类，我们在生活中时刻不停地编码记忆。海马体（hippocampus）在其中扮演核心角色，它在当下捕捉经历，使记忆快速形成并立即可用。但只有一部分经历会被巩固为长期知识。</p>
+<p class="agent-memory-en" lang="en">As humans, we encode memory constantly as we go about our lives. The hippocampus plays a central role in this, capturing experiences in the moment so that memories form quickly and are immediately available. But only some experiences are consolidated into long-term knowledge.</p>
+
+<p>这种巩固大部分似乎发生在大脑”离线”的时候。在睡眠和安静休息期间，海马体会重放（replay）我们近期的经历。这被认为会逐渐把这些经历蒸馏出来，整合进新皮层（neocortex）——储存我们大部分”知识”的那个脑区。</p>
+<p class="agent-memory-en" lang="en">Much of that consolidation appears to happen when our brains are offline. As we sleep, and during quiet rest, the hippocampus replays our recent experiences. This is thought to gradually distill those experiences and integrate them into the neocortex—the part of our brains that stores most of what we think of as knowledge.</p>
+
+<p>智能体记忆可以采用类似的分工。智能体的大量工作本来就记录在日志和对话记录（transcript）中。Letta 和加州大学伯克利分校的研究者提出了”睡眠时计算”（sleep-time compute），让模型利用交互之间的空闲时间来重新组织已有的上下文。同样的思路也可以帮助智能体组织记忆：通过回顾日志来修正错误，或产出新的笔记和表示。这个过程通常被称为<strong>做梦</strong>（dreaming）（图 1）。</p>
+<p class="agent-memory-en" lang="en">Agent memory can use a similar division of labor. Agents capture much of their work in logs or transcripts. Researchers at Letta and UC Berkeley proposed sleep-time compute as a way for models to use idle time between interactions to reorganize their existing context. The same idea can help agents organize their memory by reflecting on logs to fix mistakes or produce new notes and representations. This process is often called <span class="agent-memory-em">dreaming</span> (Figure 1).</p>
+
+<img src="/2026/11/13/agent-memory-components/fig01.webp" class="" title="图 1：智能体记忆层级——从会话日志到记忆笔记、记忆表示（如 wiki）、再到注入上下文，&quot;做梦&quot;驱动自下而上的整理">
+
+<p>我们发现，做梦是帮助 Claude 获得有效记忆的一个有力工具。在这篇文章中，我们分享我们目前对智能体记忆的思考方式，并走读我们用来探索智能体记忆的多项评估——包括做梦的使用——以及各个组成部分对记忆组织的贡献。</p>
+<p class="agent-memory-en" lang="en">We've found that dreaming has been a useful tool for helping us give Claude effective memory. In this post, we share how we've come to think about agent memory and walk through several evaluations we've used to explore agent memory, including the use of dreaming, and what each component contributes to memory organization.</p>
+
+<h2 id="2-记忆笔记"><a href="#2-记忆笔记" class="headerlink" title="2. 记忆笔记"></a>2. 记忆笔记</h2><p>我们所说的”智能体记忆”，是指 Claude 从经验中获得的知识——包括与用户的交互、被分配的任务——并且跨会话保留，保存为之后可以读取的上下文。它不包含模型学习或管理上下文的其他方式，比如<strong>权重</strong>（weights，训练期间设定的内部参数）的变化、<strong>上下文内学习</strong>（in-context learning，单次对话中获得的知识），以及<strong>压缩</strong>（compaction，Claude 写下的摘要，用来替换较早的对话轮次，以便在新上下文窗口中继续工作）。</p>
+<p class="agent-memory-en" lang="en">By "agent memory," we mean knowledge that Claude gains from experience—including interactions with users and tasks it's been assigned—and that it retains between sessions, saved as context it can read later. It excludes other ways models can learn or manage context, such as changes to their <span class="agent-memory-em">weights</span> (the internal parameters set during training), <span class="agent-memory-em">in-context learning</span> (knowledge gained within a single conversation), and <span class="agent-memory-em">compaction</span> (summaries written by Claude that replace its older turns so it can continue working in a new context window).</p>
+
+<p>在人脑中，一段经历之前、之中或之后释放的化学信号可以标记这段记忆很重要。被标记的记忆在离线期间会被更频繁地重放。这个过程叫做<strong>重放</strong>（replay），有助于把它们稳定下来并整合进长期记忆。</p>
+<p class="agent-memory-en" lang="en">In the human brain, chemical signals released before, during, or after an experience can mark a memory as important. Marked memories tend to be replayed more often than unmarked ones during offline periods. This process, called <span class="agent-memory-em">replay</span>, helps stabilize and integrate them into long-term memory.</p>
+
+<p>类似地，Claude 可以在会话日志中当场标记显著事件，方便日后查找，也可以把它们写入记忆存储，比如一个装满记忆笔记的文件夹（图 2）。但问题来了：Claude 怎么能在当下——还不知道接下来会发生什么的时候——判断什么才是显著的？</p>
+<p class="agent-memory-en" lang="en">Similarly, Claude can tag salient events in a session log as they happen, so they're easier to find later, or it can write them to a memory store, such as a folder of memory notes (Figure 2). But how can Claude tell what's salient in the moment, before it knows what's coming next?</p>
+
+<img src="/2026/11/13/agent-memory-components/fig02.webp" class="" title="图 2：记忆层级中高亮&quot;记忆笔记&quot;层——Claude 在会话中写下的显著观察">
+
+<h2 id="3-记忆可以是对未来需求的预测"><a href="#3-记忆可以是对未来需求的预测" class="headerlink" title="3. 记忆可以是对未来需求的预测"></a>3. 记忆可以是对未来需求的预测</h2><p>记忆，在某种意义上，是一种预测。智能体写下一条规则，就是在预测它所描述的模式还会再次相关。比如，写下一条已验证过的事实，就是在预测未来会话中的智能体会想直接依赖这条事实、不再二次核对。随着时间推移，Claude 做这类预测的能力已经大幅进步。</p>
+<p class="agent-memory-en" lang="en">Memory is, occasionally, a prediction. By writing down a rule, an agent predicts that the pattern it's describing will be relevant again. For instance, writing down a verified fact is a prediction that an agent in a future session will want to rely on that fact without double-checking it. Over time, Claude has become much better at making these kinds of predictions.</p>
+
+<p>看一个 Continual Learning Bench（CL-Bench）1.0 里的任务——这个基准衡量智能体利用记忆完成长程任务的能力。其中一项任务要求 Claude 查询数据库来回答一系列问题。Claude 给出答案后会被告知正确答案，并且可以写一条记忆来帮助回答后续问题。</p>
+<p class="agent-memory-en" lang="en">Consider a task from Continual Learning Bench (CL-Bench) 1.0, a benchmark that measures an agent's ability to use memory in order to tackle long-horizon tasks. One particular task asks Claude to answer a series of questions by looking up information in a database. After Claude gives an answer, it's told the correct solution and can write a memory to help answer future questions.</p>
+
+<p>记忆在这里可以支撑一个<strong>学习循环</strong>：如果 Claude 答错了，它可以记录这次失败，提出关于错因的理论，验证这些理论，再把发现转化为今后作答的规则。</p>
+<p class="agent-memory-en" lang="en">Memory can support a learning loop here. If Claude gets a question wrong, it can record the failure, come up with theories about what went wrong, test those theories, and turn what it finds into a rule about how to answer in the future.</p>
+
+<p>我们用 Claude Managed Agents 跑了这个 CL-Bench 1.0 任务。Claude 每道题都在全新会话中开始，只有一个例外：它可以读取一个跨会话持久保存的记忆目录里的文件。</p>
+<p class="agent-memory-en" lang="en">We ran the CL-Bench 1.0 task using Claude Managed Agents. Claude started each question in a fresh session, with one exception: it could retrieve files from a memory directory that persisted from one session to the next.</p>
+
+<p>不同模型建立学习循环的能力各不相同。Claude Sonnet 4.6 只走到”提出错因理论”这一步——它的记忆目录里散落着一堆文件，每份列着几条没验证过的猜测。</p>
+<p class="agent-memory-en" lang="en">Different models achieved different levels of success at creating their own learning loops. Claude Sonnet 4.6 got as far as generating theories about why an answer was wrong. Its memory directory contained a scattering of files, each listing several untested guesses.</p>
+
+<p>Claude Opus 4.7 把笔记整合成了一份单一参考文档，并开始标注哪些事实已核对、哪些仍未确认。Claude Sonnet 5 会在评分者核对后把每条答案标记为已确认，答错时写下更正。</p>
+<p class="agent-memory-en" lang="en">Claude Opus 4.7 consolidated its notes into a single reference document and began marking which facts it had checked and which were still unconfirmed. Claude Sonnet 5 marked each answer as confirmed after the grader had checked it, and wrote a correction when it had answered wrong.</p>
+
+<p>Claude Opus 5 是第一个<strong>闭环</strong>的模型。它的大部分条目都包含一条规则（以及它如何知道这条规则成立）、先前问题的答案，还有对途中发现的陷阱的明确警告（图 3）。</p>
+<p class="agent-memory-en" lang="en">Claude Opus 5 was the first of these models to close the loop. Most of its entries included a rule (and also how it knew the rule was true), answers to earlier questions, and clear warnings about traps it had discovered along the way (Figure 3).</p>
+
+<p>和 Opus 5 一样，Claude Opus 5.5 和 Claude Sonnet 5.5 都完成了闭环，用记忆捕捉关于如何答好后续问题的、经过验证的规则。借助记忆，两者得分与 Opus 5 大致相当，不过它们不带记忆的基线成绩略高。</p>
+<p class="agent-memory-en" lang="en">Like Opus 5, Claude Opus 5.5 and Claude Sonnet 5.5 both closed the loop, using memory to capture validated rules about how to best answer future questions. With memory, both scored about the same as Opus 5, though their baseline performance without memory was slightly higher.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig03.webp" class="" title="图 3：CL-Bench 数据库任务成绩——左：各模型无记忆基线 vs 有记忆的平均奖励；右：30 道题的滚动平均奖励">
+
+<h2 id="4-Claude-学会了判断显著性"><a href="#4-Claude-学会了判断显著性" class="headerlink" title="4. Claude 学会了判断显著性"></a>4. Claude 学会了判断显著性</h2><p>我们还评估了 Claude 游玩《宝可梦 红》（Pokémon Red）的表现——这款游戏考验 Claude 完成复杂长程任务的能力——用它来检验 Claude 对”<strong>该往记忆里存什么</strong>“的判断。每局开始时，我们给每个模型一个记忆文件夹，游玩过程中可读可写（图 4）。</p>
+<p class="agent-memory-en" lang="en">We also evaluated Claude's ability to play <span class="agent-memory-em">Pokémon Red</span>, a game that challenges Claude to navigate complex long-horizon tasks, as a test of Claude's judgment about <span class="agent-memory-em">what</span> to save to memory. At the start of each run, we gave each model a folder of memory files that it could read from and write to while it played (Figure 4).</p>
+
+<p>我们比较了 Claude Sonnet 3.7 和 Claude Fable 5 各一局、都进行到约 10000 步时的记忆文件夹。一个关键差异是两个模型各自认为什么值得记。Sonnet 3.7 假定一切都可能重要，不加区分地往记忆里写。它的记忆文件夹成了一座遭遇档案库：每场战斗、每件捡到的道具、每个遇到的 NPC 往往都有单独的文件。最终 Sonnet 3.7 在 225 个文件夹里写了 <strong>413 个记忆文件</strong>，拿到一枚徽章（徽章标志玩家进度）。</p>
+<p class="agent-memory-en" lang="en">We compared the memory folders from one run each of Claude Sonnet 3.7 and Claude Fable 5, when each was about 10,000 steps into the game. A key difference we noticed was what each model thought was worth remembering. Sonnet 3.7 assumed everything might matter and wrote to memory indiscriminately. Its memory folder contained an archive of encounters, often with a separate file for each battle it fought, each item it found, and each non-player character it met. Ultimately, Sonnet 3.7 wrote 413 memory files across 225 folders and earned one badge (badges mark a player's progress through the game).</p>
+
+<p>相比之下，Fable 5 只在两个文件夹里写了<strong>九个文件</strong>，外加一个名为 <code>global.md</code> 的顶层文件，拿到了四枚徽章。</p>
+<p class="agent-memory-en" lang="en">Fable 5, by comparison, wrote nine files in two folders, plus a single top-level file called <span class="agent-memory-code">global.md</span>, and earned four badges.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig04.webp" class="" title="图 4：同样比例尺下的宝可梦记忆目录树图——Sonnet 3.7：413 个文件、约 98 万字符；Fable 5：10 个文件、约 4.3 万字符">
+
+<p>Sonnet 3.7 的做法之所以出问题，主要是因为宝可梦的游戏状态一直在变——它那份详细记录在持续过时。结果随着游戏推进，它不得不把越来越多的时间和资源花在翻检记忆、而不是玩游戏上。比如在第 10000 步左右，Sonnet 3.7 开始建它的第四个”总纲”（master）记忆文件夹：接下来 17 步里它创建了 6 个文件、删了 9 个，在游戏里却一个动作都没做。</p>
+<p class="agent-memory-en" lang="en">Sonnet 3.7's approach was a problem mainly because the game state of Pokémon changes constantly—Sonnet 3.7's detailed record was continuously going out of date. As a result, as Claude progressed, it had to spend more time and resources combing through its memories rather than playing the game. Around step 10,000, for example, Sonnet 3.7 started its fourth folder of "master" memory files. Over the next 17 steps, it created six files, deleted nine others, and took no actions in the game itself.</p>
+
+<p>Fable 5 则把记忆用在游戏没有明确告诉它的事情上。Sonnet 3.7 写进记忆的一些信息——比如玩家有多少钱、在地图哪个位置——每一回合都能直接从屏幕读到，存下来纯属冗余。相反，关于策略、计划、验证过的规则的记忆，只有 Claude 自己琢磨出来才存在，不写下来就消失了。</p>
+<p class="agent-memory-en" lang="en">Fable 5's approach used memory for things the game didn't explicitly tell it. Some of the kinds of information Sonnet 3.7 wrote to memory—such as how much money the player has or where the player is on the map—can be read off the screen every turn, so storing it is redundant. By contrast, memory files about strategy, plans, and tested rules exist only if Claude works them out, and they disappear unless Claude writes them down.</p>
+
+<p>Fable 5 相应地组织了记忆。<code>global.md</code> 充当仪表盘，存着当前目标、攻克道馆（赢取徽章的挑战）的预案，以及模型自己定的记忆使用规则。<code>locations</code> 文件夹存特定路线的导航方案，<code>gameplay</code> 文件夹存基于它对游戏机制理解的战术。比如，连续七个精灵球都没抓到鲤鱼王（最容易抓的宝可梦之一）之后，Claude 写道：”如果连续 3+ 个球失败，就<strong>改变节奏</strong>（在菜单步骤之间插入额外的’等待’按键）——这么做了之后立刻抓到了。”</p>
+<p class="agent-memory-en" lang="en">Fable 5 organized its memory accordingly. Its <span class="agent-memory-code">global.md</span> file acted as a dashboard, holding the current goal, a prewritten plan for tackling gyms (the challenges where badges are won), and the model's own rules for using memory. A <span class="agent-memory-code">locations</span> folder held plans for navigating particular routes, and a <span class="agent-memory-code">gameplay</span> folder held strategies based on what it had learned about how the game works. For example, after seven Poké Balls in a row failed to catch a Magikarp (one of the easiest Pokémon to catch), Claude wrote, "If 3+ balls fail in a row, VARY the timing (insert extra 'wait' presses between menu steps) - the catch landed right after doing this."</p>
+
+<p>凭借小得多的记忆文件夹，Fable 5 在游戏里的进展远超 Sonnet 3.7。Opus 5.5 采取了类似方式：维护一小文件夹的记忆笔记，追踪当前目标和下一步行动，边玩边重写，最终通关。</p>
+<p class="agent-memory-en" lang="en">With a much smaller memory folder, Fable 5 progressed much further in the game than Sonnet 3.7. Opus 5.5 took a similar approach: it kept a small folder of memory notes that tracked its current goal and next steps, rewrote them as it played, and beat the game.</p>
+
+<h2 id="5-引导-Claude-写记忆"><a href="#5-引导-Claude-写记忆" class="headerlink" title="5. 引导 Claude 写记忆"></a>5. 引导 Claude 写记忆</h2><p>我们发现：告诉 Claude 记忆是<strong>干什么用的</strong>有帮助，但不要告诉它<strong>怎么用</strong>。在 CL-Bench 上，我们只告诉 Claude 有一个记忆文件夹可用。这条宽泛指引就足以让 Opus 4.7 和 Opus 5 有效地使用记忆，并带来明显的性能提升（图 3）。</p>
+<p class="agent-memory-en" lang="en">We've found that it helps to tell Claude what memory is for, but not <span class="agent-memory-em">how</span> to use it. On CL-Bench, we simply told Claude that a memory folder was available. That general guidance was enough for Opus 4.7 and Opus 5 to use memory effectively, and it gave both a noticeable boost in performance (Figure 3).</p>
+
+<p>我们还测试了给模型下达”该往记忆里写什么”的具体规则，每次测试一条规则，比较每条规则下记忆带来的提升与无规则时的提升。当规则设为”只记录失败”时，Opus 5 和 Opus 4.7 都丢掉了记忆带来的大部分收益（图 5 右）。对更强的模型来说，放手让它们自己判断显著性，比预先设死规则更有效——硬性规则反而可能削弱表现。</p>
+<p class="agent-memory-en" lang="en">We also tested giving the models specific rules about what they should write to memory, with one rule per test. We compared how much each model gained from memory with each rule against how much it gained without it. When we set a rule to "record only failures," both Opus 5 and Opus 4.7 lost much of the performance boost that memory gave them (Figure 5, right). For stronger models, giving them freedom to judge salience was more effective than setting fixed rules in advance, and those rules could end up weakening performance.</p>
+
+<p>我们还注意到，引导对旧模型帮助最大。比如 Sonnet 4.6 经常不去读记忆目录里的文件，也不验证自己关于错因的理论。</p>
+<p class="agent-memory-en" lang="en">We also noticed that steering helped older models the most. For instance, Sonnet 4.6 often didn't read files from its memory directory and failed to test its theories about why an answer was wrong.</p>
+
+<p>这种情况下，提示 Claude 先读记忆文件再作答、然后明确验证理论，几乎让它的基准分翻倍（图 5 左）。Sonnet 5 则完全自发：无需提示，10 次里 9 次作答前先读记忆；Sonnet 4.6 不到一半。</p>
+<p class="agent-memory-en" lang="en">In this case, prompting Claude to read its memory files before answering—and then to explicitly test its theories—nearly doubled its benchmark score (Figure 5, left). Sonnet 5 does this on its own. Without being prompted to, it read its memory before answering 9 out of 10 times. By comparison, Sonnet 4.6 did this less than half of the time.</p>
+
+<p>对于前沿 Claude 模型，我们通常只给简单指引：当用户要求、或某事明显值得记住时，创建记忆笔记——这个判断交给 Claude 自己。</p>
+<p class="agent-memory-en" lang="en">With frontier Claude models, we typically give simple guidance to create memory notes when a person asks them to or when something is clearly worth remembering, and we leave that judgment up to Claude.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig05.webp" class="" title="图 5：左——Sonnet 4.6 基线 0.330、有记忆 0.364、记忆加改写指令 0.641；右——&quot;只记录失败&quot;规则带来的记忆收益变化">
+
+<h2 id="6-做梦可以纠正记忆"><a href="#6-做梦可以纠正记忆" class="headerlink" title="6. 做梦可以纠正记忆"></a>6. 做梦可以纠正记忆</h2><p>Claude 写记忆依据的是会话内的显著性判断，于是一条从一开始就错的笔记、或随环境变化而失准的笔记，可能在之后的会话里被 Claude 读到、并被信任。</p>
+<p class="agent-memory-en" lang="en">Since Claude writes to memory based on what it judges to be salient in-session, a note that's wrong from the start or that drifts as the environment changes can be read, and trusted, by Claude in a later session.</p>
+
+<p>做梦给了 Claude 一种拿笔记对照原始对话记录做检验的手段（图 6）。我们看到过一个正面例子：Claude 用 Managed Agents 玩宝可梦，记忆挂载在一个目录上。</p>
+<p class="agent-memory-en" lang="en">Dreaming gives Claude a way to test its notes against the original transcripts (Figure 6). We saw a positive example of this when Claude played Pokémon using Managed Agents with a mounted directory for its memories.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig06.webp" class="" title="图 6：做梦对照会话日志（transcripts）校验并修正记忆笔记">
+
+<p>游戏中有一段，玩家要穿过月见山（Mt. Moon）——一个洞窟，入口在地图西侧、出口在东侧。入口附近有个陷阱：一道单向崖边，会把玩家摔回来时的那条路，且没有明显的路爬回去。Claude 把山入口处的宝可梦中心（PokéCenter）当作地标，所以它会不会走下那道崖，取决于它以为宝可梦中心在山的哪一侧。</p>
+<p class="agent-memory-en" lang="en">In one part of the game, the player has to get through Mt. Moon, a cave system with its entrance on the west side of the map and its exit on the east. Near the entrance is a trap: a one-way ledge that drops the player onto the route they came from, with no clear way to climb back up. Claude was using the PokéCenter, a building at the mountain's entrance, as a landmark, so whether it walked off the ledge depended on which side of the mountain it thought the PokéCenter was on.</p>
+
+<p>有一次，Claude（错误地）写下宝可梦中心在东侧。它从宝可梦中心走出来时宣布”月见山在我身后”，并更新笔记：”月见山 完成”。可月见山并不在它身后。几个动作之后，Claude 翻过崖边，落回了来时的那条路（图 7）。它的导航工具没显示这个落差，于是 Claude 得出结论”我冲过头跑到很西边了”，认为自己一直站在正确的一侧。其实没有。</p>
+<p class="agent-memory-en" lang="en">At one point, Claude wrote down (incorrectly) that the PokéCenter was on the east side. When it walked out of the PokéCenter, it announced, "Mt Moon is behind me," and updated its notes: "Mt Moon DONE." But Mt. Moon was not behind it. A few actions later, Claude went over the ledge and landed back on the route it had come from (Figure 7). Its navigation tool didn't show the drop, so Claude concluded, "I overshot far west," and that it had been on the correct side all along. It hadn't.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig07.webp" class="" title="图 7：月见山单向崖陷阱——左&quot;原始记忆&quot;：笔记错误，走向下一座城；右&quot;记忆加做梦&quot;：离线修正笔记，折返洞口">
+
+<p>我们接着测试做梦能否帮 Claude 避开这个陷阱。我们对那份包含错误位置的文件夹执行了做梦：Claude 把笔记与该会话的对话记录对照，抓到了错误，重写了笔记。对话记录给了 Claude 一个用来校验记忆的基准事实（ground truth）。拿着改对的笔记，Claude 径直重返月见山，最终抵达华蓝市（Cerulean City）。</p>
+<p class="agent-memory-en" lang="en">We then tested whether dreaming could help Claude avoid this trap. We ran dreaming on the memory folder that contained the wrong location for the PokéCenter: Claude checked the note against the session transcript, caught its error, and rewrote it. The transcript gave Claude a ground truth to validate its memory against. With the corrected memory note, Claude went straight back into Mt. Moon and eventually reached Cerulean City.</p>
+
+<p>而在笔记未纠正的那一局里，Claude 三次跌回那条老路。第三次失败后它似乎放弃了，写道：”我打算停下来，不再循环。”我们设置的自动回复命令它继续。它照做了——一路走回月见山之前的尼比市（Pewter City），指望在那里治疗和补给。这一局结束，Claude 始终没能抵达华蓝市。</p>
+<p class="agent-memory-en" lang="en">In the run with the uncorrected note, Claude dropped back onto that earlier route three times. After the third failure, Claude seemed to give up, writing, "I'm going to stop rather than keep looping." Our setup's automatic reply instructed it to continue. So it did, all the way back to Pewter City, the town before the mountain, where it hoped to heal and restock. The run ended without Claude ever reaching Cerulean City.</p>
+
+<p>记忆加做梦的一局在<strong>第 1935 步抵达华蓝市</strong>。</p>
+<img src="/2026/11/13/agent-memory-components/fig08.webp" class="" title="图 8：向华蓝市进发的累计进度——记忆加做梦在第 1935 步抵达；原始记忆翻崖后回退到尼比市；无记忆始终未到达">
+
+<h2 id="7-做梦可以构建新的记忆表示"><a href="#7-做梦可以构建新的记忆表示" class="headerlink" title="7. 做梦可以构建新的记忆表示"></a>7. 做梦可以构建新的记忆表示</h2><p>借助做梦，Claude 可以构建帮助在记忆中导航的表示（图 9）。它使用的一类记忆表示叫做 <strong>wiki</strong>：由 Claude 编写维护的一组页面，汇集它对某一主题的全部所知，并链接到其他笔记。这些链接实际上给了 Claude 一张地图，让它可以在记忆中筛拣、需要时高效定位记忆。</p>
+<p class="agent-memory-en" lang="en">With dreaming, Claude can build representations to help navigate memory (Figure 9). One type of memory representation it uses is called a <span class="agent-memory-em">wiki</span>, a collection of pages written and maintained by Claude that gathers what Claude knows about one subject and links it to other notes. These links effectively provide Claude with a map it can use to sift through its memory and efficiently locate memories when they're needed.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig09.webp" class="" title="图 9：做梦从会话日志和记忆笔记向上构建 wiki 等记忆表示">
+
+<p>wiki 这类表示能帮 Claude 穿行于不断增长的知识库。我们用一批内部文档探索了 wiki 作为记忆表示的收益——约 35 万个文件、约 4.2 亿 token，来自我们五月收购的软件公司 Stainless。我们围绕这批语料出了 25 道题的评估集，给 Claude 一个搜索工具去探索，并指示它利用做梦基于这些文件构建 wiki。在 128 个会话里，我们让 Opus 5 智能体探索文件、编写或修正互相链接的 wiki 页面、合并重复项、对照原始资料核查论断。</p>
+<p class="agent-memory-en" lang="en">Representations like wikis can help Claude traverse its ever-growing knowledge base. We explored the benefit of wikis as a memory representation using a corpus of internal documents—about 350,000 files, roughly 420M tokens—from Stainless, a software company we acquired in May. We created an evaluation set of 25 questions about this corpus and gave Claude a search tool to explore it. We also instructed Claude to build a wiki based on these files using dreaming. Over 128 sessions, we prompted Opus 5 agents to explore the files, write or correct linked wiki pages, merge duplicates, and check claims against the sources.</p>
+
+<p>每个会话都建立在此前会话的进展之上，用一个共享日志协调。随着做梦从 2 个会话扩展到 128 个，25 道题的得分从 13% 涨到了评分标准的 48%（图 10）。</p>
+<p class="agent-memory-en" lang="en">Each session built on the progress that agents made in prior sessions, using a shared log to coordinate work. As we scaled dreaming from two sessions to 128, performance on the 25 questions grew from 13% to 48% of graded criteria (Figure 10).</p>
+
+<p>Claude 是增量式地构建 wiki 的：建好初版后，用一轮轮做梦去增补、编辑、修剪。做梦早期，Claude 的知识像新员工，仅凭 wiki 答题能力有限；做梦越多，知识地图越丰富，像资深员工。测试中我们发现，wiki 配合搜索工具一起用时帮助最大——两者齐上时，Claude 的总分随 wiki 增长从 <strong>54% 升到 61%</strong>，而只用搜索是 53%。Claude 光靠 wiki 答题的最好成绩是 48%。搜索加 wiki 还让<strong>每道题省下约 2 万 token</strong>。</p>
+<p class="agent-memory-en" lang="en">Claude builds its wikis incrementally. After creating an initial wiki, it uses subsequent rounds of dreaming to add to, edit, or prune it. In the early rounds of dreaming, Claude's knowledge is like that of a new employee, and its ability to answer questions based on the wiki alone is limited. The more it dreams, the richer its knowledge map grows, like that of a seasoned employee. In our tests, we found that the wiki helped Claude the most when we also gave it access to a search tool. When it used both search and the wiki, Claude's aggregate score rose from 54% to 61% as that wiki grew, compared with 53% when it had access to the search tool alone. Claude's best score was 48% when it used only the wiki to answer questions. Using search and the wiki also saved about 20,000 tokens per question.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig10.webp" class="" title="图 10：做梦规模从 2M 到 128M token——wiki 加搜索 54% 到 61%，仅 wiki 13% 到 48%，仅搜索持平 53%；两侧为 2 会话与 128 会话后的 wiki 链接图">
+
+<p>我们想测哪些类型的任务能从 wiki 获益，于是用了 Harvey LAB 基准加一组并购文档。该基准给 Claude 一批文档，要求它基于内容生成法律摘要（legal brief），再按一系列标准打分。虽说可能不如看宝可梦一局精彩，但这些评估提供了多样的文档集来建 wiki。</p>
+<p class="agent-memory-en" lang="en">We wanted to test which kinds of tasks benefited from Claude having a wiki. To do this, we used the Harvey LAB benchmark along with a collection of documents about a merger. The benchmark gives Claude a set of documents and asks Claude to generate a legal brief based on their content. The benchmark then grades the brief against a list of criteria. While a tad less engaging, perhaps, than a Pokémon run, these evaluations give us diverse collections of documents to build wikis from.</p>
+
+<p>我们指示 Claude 从文档构建 wiki，然后让它分别仅凭 wiki、以及靠直接文件检索来答题或写摘要。一项测试就并购提了 24 个问题（图 11 左），超过一半需要跨多份文档找信息，不少还需要判断力或算术。在这些题上（红线和橙线），Claude 查 wiki 得 87%，只用搜索得 73%。</p>
+<p class="agent-memory-en" lang="en">We instructed Claude to build a wiki from the documents. We then asked Claude to answer questions (about the merger) or generate legal briefs (the LAB benchmark) both from the wiki and from a direct file search. One test asked 24 questions about the merger (Figure 11, left), more than half of which needed Claude to find information across several documents, and many of which also needed Claude to use judgment or do math. On those items (red and orange lines), Claude scored 87% when it consulted the wiki, compared with 73% when it used search alone.</p>
+
+<p>另一些情况下 wiki 就没那么有用了。一项 LAB 任务（图 11 右）里，摘要标准大多靠单份文档的文本检索就能拿到，wiki 相比搜索没有明显增益。另一项 LAB 任务里，wiki 长得比文档本身还大（图 12）——就像博尔赫斯一段话短篇《论科学的精确性》里那些制图师，绘出了一幅与帝国本身一样大的地图：Claude 做出了一份极其详尽、实际上什么也没抽象掉的 wiki。</p>
+<p class="agent-memory-en" lang="en">In other cases, the wiki was less useful. On one LAB task (Figure 11, right), brief criteria often could be retrieved with a text search from a single document, and the wiki showed no clear gain in performance relative to search. On another LAB task, the wiki grew larger than the documents themselves (Figure 12). Like the mapmakers in Borges's one-paragraph short story "On Exactitude in Science," who drafted a map so detailed it was as large as the empire it represented, Claude had made an extremely detailed wiki that effectively abstracted nothing.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig11.webp" class="" title="图 11：左——wiki 收益大的任务，多数评分标准跨两份以上文档；右——wiki 收益小的任务，多数标准单文档文本检索即可命中">
+
+<img src="/2026/11/13/agent-memory-components/fig12.webp" class="" title="图 12：wiki 反而比语料还大——10 份文档 115KB，建出 68 页、255 条链接、203KB 的 wiki（1.77 倍）">
+
+<h2 id="8-做梦可以把笔记提升到记忆层级的高层"><a href="#8-做梦可以把笔记提升到记忆层级的高层" class="headerlink" title="8. 做梦可以把笔记提升到记忆层级的高层"></a>8. 做梦可以把笔记提升到记忆层级的高层</h2><p>做梦还可以把笔记浮到记忆层级的顶端，由智能体 harness 在每个会话开始时预加载进 Claude 的上下文（图 13）。这意味着 Claude 不必去搜它们，甚至不必知道有东西可搜。</p>
+<p class="agent-memory-en" lang="en">Dreaming can also float notes to the top of the memory hierarchy, and the agent harness can preemptively load them into Claude's context at the start of every session (Figure 13). This means Claude doesn't need to search for them, or even to know there's something to search for.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig13.webp" class="" title="图 13：做梦把记忆笔记与表示提升为每个会话预加载的注入上下文">
+
+<p>把记忆提升进新会话（一种<strong>上下文注入</strong>，context injection）必须谨慎：注入的记忆消耗宝贵 token；一条错误笔记会被带进每一个会话；而且加载了也不保证 Claude 会照办——我们 Claude Code 的文档就警告过，指令文件越长遵从度越低。所以记忆层级的顶层必须保持相当小，做梦在这层的大量工作就是保持它小——把部分细节下移层级、留下链接。</p>
+<p class="agent-memory-en" lang="en">Promoting memories into a new session (a form of <span class="agent-memory-em">context injection</span>) must be done carefully. Injected memories use up valuable tokens, and an incorrect note can be carried into every session. Loading a note also doesn't guarantee that Claude acts on it: our documentation on Claude Code warns that longer instruction files reduce adherence. So the top layer of the memory hierarchy has to stay relatively small, and much of dreaming's work here is keeping it that way—by moving some details down the hierarchy and leaving links behind.</p>
+
+<p>Claude Code 的 auto memory（自动记忆）用同样的方式保持注入层小巧，由 Claude 在会话中维护。Claude 不会把全部 auto memory 装进每个会话的上下文窗口，只加载 <code>MEMORY.md</code> 的前 200 行或 25 KB。这个头部充当索引，告诉 Claude 它知道什么、去哪找。</p>
+<p class="agent-memory-en" lang="en">Claude Code's auto memory keeps its injected layer small in the same way, with Claude maintaining it during the session. Claude doesn't load all of its auto memory into every session's context window. It loads only the first 200 lines or 25 KB of <span class="agent-memory-code">MEMORY.md</span>. This header serves as an index, which shows Claude what it knows and where to find it.</p>
+
+<h2 id="9-做梦可以让记忆聚焦特定目标"><a href="#9-做梦可以让记忆聚焦特定目标" class="headerlink" title="9. 做梦可以让记忆聚焦特定目标"></a>9. 做梦可以让记忆聚焦特定目标</h2><p>做梦还能塑造记忆生长的方式。像 Claude Duet 这样的助手，往往受益于围绕它帮助的那个人来组织记忆——做梦可以被调校为服务于特定目标来构建记忆。</p>
+<p class="agent-memory-en" lang="en">Dreaming can also shape how memory grows. An assistant like Claude Duet, for example, often benefits from having memories that are organized around the person it's helping, and dreaming can be tuned to build memory in service of a particular goal.</p>
+
+<p>指导记忆生长的指令因任务而异，它们告诉 Claude 什么信息真正重要。比如 LAB 基准里一项任务模拟公司收购、给出一组合同，摘要按是否正确描述合同条款评分。</p>
+<p class="agent-memory-en" lang="en">The instructions that guide how memory grows differ by task and tell Claude what information actually matters. For example, one task in the LAB benchmark simulates a company acquisition and provides a set of contracts. The brief is graded on whether it correctly describes the contract terms.</p>
+
+<p>我们最初给 wiki 生成的指令很基础，没告诉 Claude 这份 wiki 会怎么用。这项任务高度依赖合同条款，而构建 wiki 期间，多个智能体同时往一张共享的合同条款表里写（图 14 左）。</p>
+<p class="agent-memory-en" lang="en">We started with basic instructions for generating the wiki that didn't tell Claude <span class="agent-memory-em">how</span> to use the wiki. This task relied heavily on contract terms. While the wiki was being built, several agents wrote to a shared table of contract terms at the same time (Figure 14, left).</p>
+
+<img src="/2026/11/13/agent-memory-components/fig14.webp" class="" title="图 14：左——多个智能体写同一共享页 provisions.md 互相覆盖，57 条事实仅存 41 条；右——每份合同独立成页、逐字引用条款，57 条全部保留">
+
+<p>结果 wiki 缺了关键事实：基于它生成的摘要只覆盖 57 条事实中的 41 条（<strong>72%</strong>）。复盘发现那张共享表对条款概括得很差、有些干脆缺失——因为智能体互相覆盖了对方的工作。</p>
+<p class="agent-memory-en" lang="en">The result was a wiki that was missing key facts. When we graded a brief generated from the wiki, Claude had included only 41 of the 57 facts (72%). When we looked at what had gone wrong, we found that the shared table summarized the contract terms poorly and was missing some of them altogether, because agents had overwritten one another's work.</p>
+
+<p>合同条款是 wiki 里最重要的部分，但指令没这么说。为了找到更好的指令，我们跑了一个循环：Claude 反思失败 → 提出指令修改 → 重建 wiki。这个循环让 Claude 自己发现了紧跟合同条款的重要性，并据此改写了建 wiki 的指令。</p>
+<p class="agent-memory-en" lang="en">The contract terms were the most important part of the wiki, but the instructions didn't say that. To find better instructions, we ran a loop in which Claude reflected on its failures, proposed a change to the instructions, and rebuilt the wiki. This loop allowed Claude to discover how important it was to follow the contract terms, and it rewrote the instructions for building the wiki accordingly.</p>
+
+<p>改版中每份合同在 wiki 里有独立页面、由单个智能体撰写、逐字引用条款而非概括进共享表。基于改进后 wiki 的摘要，<strong>100%</strong> 的评分标准都能满足——之前是 <strong>72%</strong>。</p>
+<p class="agent-memory-en" lang="en">Each contract got its own page in the wiki, written by a single agent, which quoted the terms word for word rather than summarizing them into a shared table. When we graded the brief generated from this improved wiki, 100% of the criteria could be met, up from 72%.</p>
+
+<h2 id="10-做梦可以填补会话遗留的缺口"><a href="#10-做梦可以填补会话遗留的缺口" class="headerlink" title="10. 做梦可以填补会话遗留的缺口"></a>10. 做梦可以填补会话遗留的缺口</h2><p>Claude 写记忆笔记时，只看得见那一个会话里的上下文。做梦可以跨许多会话搜索，发现共同模式、纠正共性错误。</p>
+<p class="agent-memory-en" lang="en">When Claude writes memory notes, it sees only the context in <span class="agent-memory-em">that</span> particular session. Dreaming can search across many sessions to find common patterns or correct common mistakes.</p>
+
+<p>为 LAB 基准建 wiki 时（示例见图 14），Claude 有时会链接到还没创建的页面。第二轮做梦补上了许多这类缺口。一项任务里（图 15），做梦发现 wiki 中九个指向缺失页面的链接，把它们重定向到同一文档的既有页面，还新增了三个页面（含一个索引）来改进 wiki。</p>
+<p class="agent-memory-en" lang="en">When building the wikis for the LAB benchmark (as an example, see Figure 14), sometimes Claude would link to pages that hadn't yet been created. A second dreaming pass closed many of these gaps. On one task (Figure 15), dreaming found nine links to a missing page in the wiki and repointed them to an existing page for the same document. It also added three new pages, including an index, to improve the wiki.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig15.webp" class="" title="图 15：第二轮做梦前后——9 条指向不存在页面 escrow-agreement 的链接全部改指 buyer-form-escrow-agreement，并新增索引等 3 个页面">
+
+<h2 id="11-回望过去，面向未来"><a href="#11-回望过去，面向未来" class="headerlink" title="11. 回望过去，面向未来"></a>11. 回望过去，面向未来</h2><p>关于智能体记忆系统的设计还有许多开放问题。其一是 <strong>Claude 该在何时创建记忆</strong>。执行任务时写入记忆存储（文件夹、文件或数据库），能在源头捕捉显著性、让重要细节对后续轮次立即可用；但当场记笔记必然分散 Claude 对主任务的注意力。做梦则可以把记忆创建推到后台，但其产出未必能立即被 Claude 用上。</p>
+<p class="agent-memory-en" lang="en">There are many open questions about how to design memory systems for agents. One is when Claude should create memory. When Claude works on a task, it can write to a memory store (e.g., a folder, file, or database), capturing salience at the source and making important details immediately available for future turns or sessions. But logging notes in the moment inevitably draws Claude's attention away from its main task. In contrast, dreaming can push memory creation to the background, but any outputs from dreaming may not be immediately accessible to Claude.</p>
+
+<p>另一个问题是<strong>如何让记忆可靠地保持最新</strong>。Claude 可能做出错误预测，或从一开始就把错误规则写进记忆；记忆也会随环境变化而漂移、失效。做梦是纠错的一种方式（图 8），但要耗算力。让 Claude 持续检查全部记忆未必现实——更可行的或许是让做梦聚焦在易变的信息上，或仔细调节做梦的节奏（比如按记忆的访问频率）。</p>
+<p class="agent-memory-en" lang="en">Another question is how to keep memory reliably up to date. Claude can make incorrect predictions or write rules to memory that are wrong from the start. Memory can also drift and become irrelevant as the environment changes. Dreaming is one way to fix these mistakes (Figure 8), but it requires compute. Directing Claude to continuously check <span class="agent-memory-em">all</span> its memories might not be practical. It may be important instead to focus dreaming on information that's likely to change or to carefully tune the cadence of dreaming (e.g., based on how often memories are accessed).</p>
+
+<p>把对话记录检索当作 Claude 记忆的地基也是合理的思路。表示（如 wiki）与搜索结合（图 10）有时很有效，但 Claude 需要持续投入算力维护这些表示，防止错误和幻觉越积越多。</p>
+<p class="agent-memory-en" lang="en">It's also reasonable to consider transcript search as the foundation of Claude's memory. Combining representations (e.g., wikis) with search (Figure 10) can sometimes be effective. But Claude needs to use compute to maintain memory representations and make sure they don't accumulate errors or hallucinations.</p>
+
+<p>尽管 Claude 对显著性的判断已经长进，没有哪个模型能真正预知未来的轮次。做梦给了 Claude 向后看的机会：用算力组织记忆、纠正错误、维护让未来会话更容易访问记忆的表示。随着 Claude 能力增强，记忆系统也会演进——我们在设计 Claude 的记忆系统上，还有很多要学的。</p>
+<p class="agent-memory-en" lang="en">Even though Claude's judgment about salience has improved, no model can really know what will happen in future turns. Dreaming gives Claude an opportunity to look <span class="agent-memory-em">backward</span> and use compute to organize its memory, correct mistakes, and maintain representations that allow future sessions to access memory more readily. Memory systems will evolve as Claude gets more capable, and we still have a lot to learn about designing Claude's memory systems.</p>
+
+<p>入门做梦与知识 wiki，参见官方 cookbook：<a target="_blank" rel="noopener" href="https://platform.claude.com/cookbook/managed-agents-cma-dreaming-with-a-dynamic-workflow">managed-agents-cma-dreaming-with-a-dynamic-workflow</a>。</p>
+<p class="agent-memory-en" lang="en">See our cookbooks for getting started with dreaming and knowledge wikis.</p>
+
+<h2 id="12-术语对照表"><a href="#12-术语对照表" class="headerlink" title="12. 术语对照表"></a>12. 术语对照表</h2><table>
+<thead>
+<tr>
+<th>英文</th>
+<th>本文译法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dreaming</td>
+<td>做梦</td>
+<td>智能体在空闲时回顾会话日志、重组记忆的离线过程，对应人类睡眠中的记忆巩固</td>
+</tr>
+<tr>
+<td>sleep-time compute</td>
+<td>睡眠时计算</td>
+<td>Letta 与 UC Berkeley 提出的概念，dreaming 的思想来源</td>
+</tr>
+<tr>
+<td>salience &#x2F; salient</td>
+<td>显著性 &#x2F; 显著的</td>
+<td>判断”什么值得记住”的能力，文中衡量模型代际进步的主线</td>
+</tr>
+<tr>
+<td>transcript</td>
+<td>会话日志 &#x2F; 对话记录</td>
+<td>智能体全部行为的原始记录，做梦时的校验基准</td>
+</tr>
+<tr>
+<td>compaction</td>
+<td>压缩</td>
+<td>Claude 写摘要替换旧对话轮次，以便换新上下文窗口继续工作</td>
+</tr>
+<tr>
+<td>context injection</td>
+<td>上下文注入</td>
+<td>把高层记忆预加载进每个新会话的上下文</td>
+</tr>
+<tr>
+<td>memory hierarchy</td>
+<td>记忆层级</td>
+<td>日志 → 记忆笔记 → 记忆表示（wiki）→ 注入上下文，自下而上</td>
+</tr>
+<tr>
+<td>replay</td>
+<td>重放</td>
+<td>离线期间重放被标记的记忆，巩固进长期记忆</td>
+</tr>
+</tbody></table>
+<p>宝可梦专名采用官方中文：月见山（Mt. Moon）、华蓝市（Cerulean City）、尼比市（Pewter City）、鲤鱼王（Magikarp）、宝可梦中心（PokéCenter）。</p>
+<p><span class="agent-memory-note">原文版权归 Anthropic 所有 · <a target="_blank" rel="noopener" href="https://www.anthropic.com/research/components-of-agent-memory">原文地址</a> · <a target="_blank" rel="noopener" href="https://platform.claude.com/cookbook/managed-agents-cma-dreaming-with-a-dynamic-workflow">Cookbook</a></span></p>
+<!-- flag of hidden posts --></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io">clearlove13</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io/2026/11/13/agent-memory-components/">https://yudongyouqing.github.io/2026/11/13/agent-memory-components/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://yudongyouqing.github.io" target="_blank">Can you fell my world</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agent/">Agent</a><a class="post-meta__tags" href="/tags/Claude/">Claude</a><a class="post-meta__tags" href="/tags/%E7%BF%BB%E8%AF%91/">翻译</a></div><div class="post-share"><div class="social-share" data-image="/images/avatar.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</div></div><div class="info-2"><div class="info-item-1">原文链接：用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层 这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。   先说结论我理解这篇文章的重点有三个：  Agent 需要的不是一次性 RAG，而是长期可维护的知识层。 检索不应该只靠向量，grep + 向量 + 图谱扩展 可以互相补失败模式。 中文技术知识里，精确词、缩写、同义词和领域术语非常重要，不能盲目相信 embedding。  传统 RAG 更像“问一次，临时找资料，再回答”。LLM Wiki 的思路更像“先把知识编译成一个持续增长的代码库”。每次新增资料，不只是存进去，而是要抽取概念、建立链接、更新索引，让后续检索和推理都能复用这部分沉淀。 LLM Wiki 的关键变化Karpathy 的 LLM Wiki 有一个很有意思的比喻：  Obsidian 类似 IDE。 Wiki 类似代码库。 LLM 类似程序员。  ...</div></div></div></a><a class="pagination-related" href="/2026/05/25/rag-grep-claude-code/" title="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-25</div><div class="info-item-2">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</div></div><div class="info-2"><div class="info-item-1">原文链接：RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归 这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？ 我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，LLM + grep/ripgrep + 文件读取 这种动态检索方式，很多时候比“提前切分、向量化、建索引”的传统 RAG 更直接。   先说结论传统 RAG 的典型流程是：  把资料切成 chunk。 对 chunk 做 embedding。 存到向量库。 用户提问时先召回相似片段。 再把片段塞给模型生成回答。  这个流程在知识库问答里很常见，但放到代码库里会遇到几个问题：  代码变化很快，索引很容易过期。 chunk 切分可能破坏函数、类、调用链的完整语义。 向量相似度不一定能准确命中真实入口。 检索出来的内容仍然需要模型继续判断是否相关。  而 Claude Code 这类工具更像一个会使用命令行的程序员：先看目录，再用关键词搜索，再读文件，再顺着调用关系继续...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">clearlove13</div><div class="author-info-description">Golang 后端开发 / 技术爱好者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">9</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yudongyouqing"><i class="fab fa-github"></i><span>GitHub</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">记录技术学习、调试经验和文档收藏。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%BC%80%E7%AF%87%EF%BC%9A%E7%94%9F%E5%91%BD%E5%8F%AA%E8%83%BD%E5%9B%9E%E6%9C%9B%E6%97%B6%E8%A2%AB%E7%90%86%E8%A7%A3%EF%BC%8C%E5%8D%B4%E5%BF%85%E9%A1%BB%E5%90%91%E5%89%8D%E6%B4%BB"><span class="toc-number">1.</span> <span class="toc-text">1. 开篇：生命只能回望时被理解，却必须向前活</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%AE%B0%E5%BF%86%E7%AC%94%E8%AE%B0"><span class="toc-number">2.</span> <span class="toc-text">2. 记忆笔记</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%AE%B0%E5%BF%86%E5%8F%AF%E4%BB%A5%E6%98%AF%E5%AF%B9%E6%9C%AA%E6%9D%A5%E9%9C%80%E6%B1%82%E7%9A%84%E9%A2%84%E6%B5%8B"><span class="toc-number">3.</span> <span class="toc-text">3. 记忆可以是对未来需求的预测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Claude-%E5%AD%A6%E4%BC%9A%E4%BA%86%E5%88%A4%E6%96%AD%E6%98%BE%E8%91%97%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">4. Claude 学会了判断显著性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E5%BC%95%E5%AF%BC-Claude-%E5%86%99%E8%AE%B0%E5%BF%86"><span class="toc-number">5.</span> <span class="toc-text">5. 引导 Claude 写记忆</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E5%81%9A%E6%A2%A6%E5%8F%AF%E4%BB%A5%E7%BA%A0%E6%AD%A3%E8%AE%B0%E5%BF%86"><span class="toc-number">6.</span> <span class="toc-text">6. 做梦可以纠正记忆</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E5%81%9A%E6%A2%A6%E5%8F%AF%E4%BB%A5%E6%9E%84%E5%BB%BA%E6%96%B0%E7%9A%84%E8%AE%B0%E5%BF%86%E8%A1%A8%E7%A4%BA"><span class="toc-number">7.</span> <span class="toc-text">7. 做梦可以构建新的记忆表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E5%81%9A%E6%A2%A6%E5%8F%AF%E4%BB%A5%E6%8A%8A%E7%AC%94%E8%AE%B0%E6%8F%90%E5%8D%87%E5%88%B0%E8%AE%B0%E5%BF%86%E5%B1%82%E7%BA%A7%E7%9A%84%E9%AB%98%E5%B1%82"><span class="toc-number">8.</span> <span class="toc-text">8. 做梦可以把笔记提升到记忆层级的高层</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E5%81%9A%E6%A2%A6%E5%8F%AF%E4%BB%A5%E8%AE%A9%E8%AE%B0%E5%BF%86%E8%81%9A%E7%84%A6%E7%89%B9%E5%AE%9A%E7%9B%AE%E6%A0%87"><span class="toc-number">9.</span> <span class="toc-text">9. 做梦可以让记忆聚焦特定目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E5%81%9A%E6%A2%A6%E5%8F%AF%E4%BB%A5%E5%A1%AB%E8%A1%A5%E4%BC%9A%E8%AF%9D%E9%81%97%E7%95%99%E7%9A%84%E7%BC%BA%E5%8F%A3"><span class="toc-number">10.</span> <span class="toc-text">10. 做梦可以填补会话遗留的缺口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E5%9B%9E%E6%9C%9B%E8%BF%87%E5%8E%BB%EF%BC%8C%E9%9D%A2%E5%90%91%E6%9C%AA%E6%9D%A5"><span class="toc-number">11.</span> <span class="toc-text">11. 回望过去，面向未来</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-%E6%9C%AF%E8%AF%AD%E5%AF%B9%E7%85%A7%E8%A1%A8"><span class="toc-number">12.</span> <span class="toc-text">12. 术语对照表</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</a><time datetime="2026-10-20T08:22:49.000Z" title="发表于 2026-10-20 16:22:49">2026-10-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南">Go 语言中的 defer：常见用法与避坑指南</a><time datetime="2026-10-20T07:34:00.000Z" title="发表于 2026-10-20 15:34:00">2026-10-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账">一个流水水水水账</a><time datetime="2026-06-15T16:00:00.000Z" title="发表于 2026-06-16 00:00:00">2026-06-16</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法">中文分词-最大匹配算法</a><time datetime="2026-06-04T13:31:33.000Z" title="发表于 2026-06-04 21:31:33">2026-06-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</a><time datetime="2026-05-25T06:42:31.000Z" title="发表于 2026-05-25 14:42:31">2026-05-25</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/images/home-sunset.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2026 By clearlove13</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN","data-mapping":"pathname","data-input-position":"top","data-reactions-enabled":1}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'yudongyouqing/yudongyouqing.github.io',
+      'data-repo-id': 'R_kgDOQ-xeoQ',
+      'data-category-id': 'DIC_kwDOQ-xeoc4C1UgL',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !true) {
+    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script src="/js/footer-bg.js"></script><script src="/js/wordcloud2.min.js?v=1.2.2"></script><script src="/js/tag-cloud.js?v=20261113"></script><script src="/js/music-player.js?v=20260617-cover"></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

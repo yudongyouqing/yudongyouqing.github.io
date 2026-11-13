@@ -634,3 +634,12 @@ body {
   }
 
 }
+
+/* ===== 标签页 /tags/ 词云（wordcloud2.js，配合 /js/tag-cloud.js 与 scripts/tag-cloud-data.js）===== */
+
+.page.type-tags #tag-wordcloud {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 8px 0 16px;
+}
