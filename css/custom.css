@@ -635,11 +635,47 @@ body {
 
 }
 
-/* ===== 标签页 /tags/ 词云（wordcloud2.js，配合 /js/tag-cloud.js 与 scripts/tag-cloud-data.js）===== */
+/* ===== 3D 旋转词云球：/tags/ 与 /categories/ 共用（/js/tag-cloud.js + scripts/tag-cloud-data.js）===== */
 
-.page.type-tags #tag-wordcloud {
-  display: block;
+#tag-sphere {
+  --ts-top: #d97706;
+  --ts-hot: #0f766e;
+  --ts-mid: #2a8f85;
+  --ts-low: #66736f;
+  position: relative;
+  height: clamp(300px, 44vw, 440px);
   margin: 0 auto;
   max-width: 100%;
-  padding: 8px 0 16px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+[data-theme='dark'] #tag-sphere {
+  --ts-top: #fbbf24;
+  --ts-hot: #5eead4;
+  --ts-mid: #2dd4bf;
+  --ts-low: #7d8f8a;
+}
+
+#tag-sphere a {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35em 0.5em;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+  will-change: transform, opacity;
+}
+
+#tag-sphere a.ts-top { color: var(--ts-top); }
+#tag-sphere a.ts-hot { color: var(--ts-hot); }
+#tag-sphere a.ts-mid { color: var(--ts-mid); }
+#tag-sphere a.ts-low { color: var(--ts-low); }
+
+#tag-sphere a:hover {
+  background: rgba(15, 118, 110, 0.1);
 }
