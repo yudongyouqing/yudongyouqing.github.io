@@ -26,10 +26,13 @@
     }
   } catch (e) { /* sessionStorage 不可用就跳过 */ }
   new MutationObserver(function () {
+    var on = document.body.classList.contains('read-mode');
     try {
-      if (document.body.classList.contains('read-mode')) sessionStorage.setItem(KEY, '1');
+      if (on) sessionStorage.setItem(KEY, '1');
       else sessionStorage.removeItem(KEY);
     } catch (e) {}
+    /* 进入阅读态应用缩放，退出阅读态清掉内联字号（不影响普通视图） */
+    if (typeof apply === 'function' && container) apply();
   }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   /* —— 右上角控制组：字号缩放 + 明暗切换（仅文章页） —— */
@@ -45,7 +48,14 @@
   function apply() {
     /* 钳制增量本身，避免累积越界后顶死在上/下限 */
     delta = Math.min(0.54, Math.max(-0.26, delta));
-    container.style.fontSize = (base + delta).toFixed(3) + 'rem';
+    /* 缩放只在阅读模式生效，且增量为 0 时清空内联，让各模式 CSS 原生字号接管 */
+    if (!document.body.classList.contains('read-mode') || delta === 0) {
+      container.style.fontSize = '';
+    } else {
+      /* 基准懒测量：首次应用时取当前（已在阅读模式下的）实际字号 */
+      if (!container.style.fontSize) base = parseFloat(getComputedStyle(container).fontSize) / 16 || base;
+      container.style.fontSize = (base + delta).toFixed(3) + 'rem';
+    }
     try { sessionStorage.setItem(FS_KEY, String(delta)); } catch (e) {}
   }
   if (delta) apply();
@@ -64,6 +74,7 @@
   wrap.className = 'am-fs-wrap';
   wrap.appendChild(mkBtn('A+', '放大', function () { delta += 0.06; apply(); }));
   wrap.appendChild(mkBtn('A−', '缩小', function () { delta -= 0.06; apply(); }));
+  wrap.appendChild(mkBtn('<i class="fas fa-rotate-left"></i>', '复位字号', function () { delta = 0; apply(); }));
   wrap.appendChild(mkBtn('<i class="fas fa-adjust"></i>', '切换明暗', function () {
     var d = document.getElementById('darkmode');
     d && d.click();
