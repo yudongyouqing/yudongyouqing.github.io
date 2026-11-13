@@ -679,3 +679,13 @@ body {
 #tag-sphere a:hover {
   background: rgba(15, 118, 110, 0.1);
 }
+
+/* ===== 右下角工具栏：去掉设置齿轮，隐藏组（阅读/暗色/侧栏）常态展开 ===== */
+#rightside #rightside-config {
+  display: none;
+}
+#rightside #rightside-config-hide {
+  height: auto;
+  opacity: 1;
+  transform: translate(0, 0);
+}
