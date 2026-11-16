@@ -726,3 +726,55 @@ body.read-mode .am-fs-wrap {
 [data-theme='dark'] .am-fs-btn:hover {
   background: #333;
 }
+
+/* ===== 阅读模式通用层（全站，提升自 agent-memory-components）============
+   按原文 anthropic.com/research 实测参数：栏宽 720px、正文衬线 ~17px、行高 1.65（中文放宽自 1.53）、
+   标题 sans 加粗、象牙纸底 / 暗色 #141413、图片略宽于正文居中出血、保留顶栏 */
+body.read-mode {
+  background: #faf9f5 !important;
+}
+body.read-mode #nav {
+  display: flex !important;
+}
+body.read-mode .exit-readmode {
+  top: 84px !important;
+}
+body.read-mode #post {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+body.read-mode #post > :not(#article-container) {
+  display: none !important;
+}
+body.read-mode #article-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 20px 96px;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  font-size: 1.06rem; /* ← 阅读模式正文字号（全站），调大小改这里 */
+  line-height: 1.65;
+  color: #191917;
+}
+body.read-mode #article-container p { line-height: 1.65; }
+body.read-mode #article-container h2 {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+body.read-mode #article-container img {
+  display: block;
+  width: min(92vw, 960px);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  margin-block: 3rem;
+  border: none;
+}
+[data-theme='dark'] body.read-mode {
+  background: #141413 !important;
+}
+[data-theme='dark'] body.read-mode #article-container {
+  color: #d8d5cc;
+}
