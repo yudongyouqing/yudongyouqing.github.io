@@ -10,7 +10,7 @@
   <rights>All rights reserved 2026, clearlove13</rights>
   <subtitle>充满鲜花的世界到底在哪里</subtitle>
   <title>Can you feel my world</title>
-  <updated>2026-11-16T07:54:50.742Z</updated>
+  <updated>2026-11-16T08:00:44.385Z</updated>
   <entry>
     <author>
       <name>clearlove13</name>
@@ -25,12 +25,9 @@
     <id>https://yudongyouqing.github.io/2026/11/16/claude-memory-takeaways/</id>
     <link href="https://yudongyouqing.github.io/2026/11/16/claude-memory-takeaways/"/>
     <published>2026-11-16T01:24:01.000Z</published>
-    <summary>
-      <![CDATA[<p>Anthropic 十一月初发了一篇讲智能体记忆的文章，说了一件挺根本的事：Claude 要从经验里学习，就必须在<strong>不知道未来会发生什么</strong>的时候，先决定什么值得记住。全文翻译放在<a href="/2026/11/13/agent-memory-components/">这里</a>（双语对照，带原文全部引用链接）。</p>
-<p>这篇不重复原文内容，只写我自己的三个收获和一个联想。都是我看完之后过了几天还留在脑子里的东西。</p>]]>
-    </summary>
+    <summary>读完 Anthropic 智能体记忆文章的三个收获：显著性判断是记忆的第一性问题、&quot;做梦&quot;是拿笔记对照日志对账、MEMORY.md 的前 200 行就是四层记忆落地的样子。</summary>
     <title>Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</title>
-    <updated>2026-11-16T07:54:50.742Z</updated>
+    <updated>2026-11-16T08:00:44.385Z</updated>
   </entry>
   <entry>
     <author>
