@@ -1,4 +1,91 @@
-<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Go 语言中的 defer：常见用法与避坑指南 | Can you feel my world</title><meta name="author" content="clearlove13"><meta name="copyright" content="clearlove13"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="写 Go 的人几乎每天都在用 defer：打开文件要 Close，加了锁要 Unlock，拿到 HTTP 响应要 Body.Close()。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 return 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。 本文先把 defer 的三条核心规则讲清">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Hexo Theme Redefine">
+    
+    
+    <meta name="author" content="clearlove13">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://yudongyouqing.github.io/2026/10/20/go-defer/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="写 Go 的人几乎每天都在用 defer：打开文件要 Close，加了锁要 Unlock，拿到 HTTP 响应要 Body.Close()。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 return 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。 本文先把 defer 的三条核心规则讲清">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Go 语言中的 defer：常见用法与避坑指南">
 <meta property="og:url" content="https://yudongyouqing.github.io/2026/10/20/go-defer/">
@@ -13,161 +100,596 @@
 <meta property="article:tag" content="defer">
 <meta property="article:tag" content="避坑">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://yudongyouqing.github.io/2026/10/20/go-defer/cover.webp"><script type="application/ld+json">{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "Go 语言中的 defer：常见用法与避坑指南",
-  "url": "https://yudongyouqing.github.io/2026/10/20/go-defer/",
-  "image": "https://yudongyouqing.github.io/2026/10/20/go-defer/cover.webp",
-  "datePublished": "2026-10-20T07:34:00.000Z",
-  "dateModified": "2026-11-16T01:38:42.153Z",
-  "author": [
-    {
-      "@type": "Person",
-      "name": "clearlove13",
-      "url": "https://yudongyouqing.github.io"
-    }
-  ]
-}</script><link rel="shortcut icon" href="/images/avatar.jpg"><link rel="canonical" href="https://yudongyouqing.github.io/2026/10/20/go-defer/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
-    (() => {
-      
-    const saveToLocal = {
-      set: (key, value, ttl) => {
-        if (!ttl) return
-        const expiry = Date.now() + ttl * 86400000
-        localStorage.setItem(key, JSON.stringify({ value, expiry }))
-      },
-      get: key => {
-        const itemStr = localStorage.getItem(key)
-        if (!itemStr) return undefined
-        const { value, expiry } = JSON.parse(itemStr)
-        if (Date.now() > expiry) {
-          localStorage.removeItem(key)
-          return undefined
-        }
-        return value
-      }
-    }
-
-    window.btf = {
-      saveToLocal,
-      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = url
-        script.async = true
-        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
-        script.onload = script.onreadystatechange = () => {
-          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
-        }
-        script.onerror = reject
-        document.head.appendChild(script)
-      }),
-      getCSS: (url, id) => new Promise((resolve, reject) => {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = url
-        if (id) link.id = id
-        link.onload = link.onreadystatechange = () => {
-          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
-        }
-        link.onerror = reject
-        document.head.appendChild(link)
-      }),
-      addGlobalFn: (key, fn, name = false, parent = window) => {
-        if (!true && key.startsWith('pjax')) return
-        const globalFn = parent.globalFn || {}
-        globalFn[key] = globalFn[key] || {}
-        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
-        parent.globalFn = globalFn
-      }
-    }
-  
-      
-      const activateDarkMode = () => {
-        document.documentElement.setAttribute('data-theme', 'dark')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
-        }
-      }
-      const activateLightMode = () => {
-        document.documentElement.setAttribute('data-theme', 'light')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
-        }
-      }
-
-      btf.activateDarkMode = activateDarkMode
-      btf.activateLightMode = activateLightMode
-
-      const theme = saveToLocal.get('theme')
+<meta name="twitter:image" content="https://yudongyouqing.github.io/2026/10/20/go-defer/cover.webp">
     
-          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/avatar.jpg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/avatar.jpg">
+    <meta name="theme-color" content="#0F766E">
+    <link rel="shortcut icon" href="/images/avatar.jpg">
+    <!--- Page Info-->
+    
+    <title>
         
-      
-      const asideStatus = saveToLocal.get('aside-status')
-      if (asideStatus !== undefined) {
-        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
-      }
+            Go 语言中的 defer：常见用法与避坑指南 | Can you feel my world
+        
+    </title>
+
     
-      
-    const detectApple = () => {
-      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
-        document.documentElement.classList.add('apple')
-      }
-    }
-    detectApple()
-  
-    })()
-  </script><script>const GLOBAL_CONFIG = {
-  root: '/',
-  algolia: undefined,
-  localSearch: undefined,
-  translate: undefined,
-  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
-  copy: {
-    success: '复制成功',
-    error: '复制失败',
-    noSupport: '浏览器不支持'
-  },
-  relativeDate: {
-    homepage: false,
-    post: false
-  },
-  runtime: '',
-  dateSuffix: {
-    just: '刚刚',
-    min: '分钟前',
-    hour: '小时前',
-    day: '天前',
-    month: '个月前'
-  },
-  copyright: undefined,
-  lightbox: 'null',
-  Snackbar: undefined,
-  infinitegrid: {
-    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
-    buttonText: '加载更多'
-  },
-  isPhotoFigcaption: false,
-  islazyloadPlugin: false,
-  isAnchor: false,
-  percent: {
-    toc: true,
-    rightside: true,
-  },
-  autoDarkmode: false
-}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
-  title: 'Go 语言中的 defer：常见用法与避坑指南',
-  isHighlightShrink: false,
-  isToc: true,
-  pageType: 'post'
-}</script><link rel="stylesheet" href="/css/custom.css?v=20261113f"><meta name="generator" content="Hexo 8.1.1"><link rel="alternate" href="/atom.xml" title="Can you feel my world" type="application/atom+xml">
-</head><body><div class="bg-animation" id="web_bg" style="background-color: #f7f9fc;"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/2026/10/20/go-defer/cover.webp);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Can you feel my world</span></a><a class="nav-page-title" href="/"><span class="site-name">Go 语言中的 defer：常见用法与避坑指南</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Go 语言中的 defer：常见用法与避坑指南</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-20T07:34:00.000Z" title="发表于 2026-10-20 15:34:00">2026-10-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-16T01:38:42.153Z" title="更新于 2026-11-16 09:38:42">2026-11-16</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Go/">Go</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>写 Go 的人几乎每天都在用 <code>defer</code>：打开文件要 <code>Close</code>，加了锁要 <code>Unlock</code>，拿到 HTTP 响应要 <code>Body.Close()</code>。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 <code>return</code> 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。</p>
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+        
+            
+    
+            
+    
+            
+                
+                    <link rel="stylesheet" href="/css/redefine-custom.css?v=20261119t">
+                
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"yudongyouqing.github.io","root":"/","language":"zh-CN","path":"search.xml"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.75,"image_border_radius":"12px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"2.8rem","h2":"2.2rem","h3":"1.8rem","h4":"1.5rem","h5":"1.3rem","h6":"1.2rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":false,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"tokyo-night-dark"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":false,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/home-sunset.jpg","skip_dirs":[]}},"colors":{"primary":"#0F766E","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1080px","sidebar_width":"220px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":true,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/home-sunset.jpg","description":"Golang 后端开发 / 技术爱好者 · 记录技术学习、调试经验和文档收藏"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/home-sunset.jpg","dark":"/images/home-sunset.jpg"},"title":"Can you feel my world","subtitle":{"text":["充满鲜花的世界到底在哪里","如果它真的存在那么我一定会去"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":95,"backing_speed":65,"starting_delay":400,"backing_delay":1800,"loop":true,"smart_backspace":true},"text_color":{"light":"#ffffff","dark":"#e5e7eb"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.35rem","line_height":1.25},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"center","links":[{"icon":"fa-brands fa-github","url":"https://github.com/yudongyouqing"},{"icon":"fa-brands fa-twitter","url":null},{"icon":"fa-solid fa-at","url":null},{"icon":"fa-brands fa-telegram","url":null},{"icon":"/images/custom-icon.svg","url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":true},"aplayer":{"enable":false,"type":"mini","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#0f766e","right":"#d97706","transparency":35},"width":{"home":"1200px","pages":"1080px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"归档":{"path":"/archives/","icon":"fa-regular fa-archive"},"分类":{"path":"/categories/","icon":"fa-regular fa-folder"},"说说":{"path":"/talking/","icon":"fa-regular fa-comment-dots"},"文档收藏":{"path":"/webdocs/","icon":"fa-regular fa-bookmark"},"更多":{"icon":"fa-regular fa-compass","submenus":{"标签":"/tags/","图库":"/gallery/","留言板":"/messageboard/","关于":"/about/"}}},"search":{"enable":true,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"blur","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"info","announcement":"","show_on_mobile":true,"links":{"归档":{"path":"/archives/","icon":"fa-regular fa-archive"},"分类":{"path":"/categories/","icon":"fa-regular fa-folder"},"标签":{"path":"/tags/","icon":"fa-solid fa-tags"},"文档收藏":{"path":"/webdocs/","icon":"fa-regular fa-bookmark"},"关于":{"path":"/about/","icon":"fa-regular fa-user"}}},"article_date_format":"YYYY-MM-DD","excerpt_length":160,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":4}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart\" style=\"color: #0f766e\"></i>","start":"2026/01/22 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2026/01/22 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.1"><link rel="alternate" href="/atom.xml" title="Can you feel my world" type="application/atom+xml">
+</head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+	<span class="scroll-progress-bar"></span>
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Can you feel my world
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives/"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories/"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/talking/"
+                                        >
+                                    <i class="fa-regular fa-comment-dots fa-fw"></i>
+                                    说说
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/webdocs/"
+                                        >
+                                    <i class="fa-regular fa-bookmark fa-fw"></i>
+                                    文档收藏
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class="has-dropdown"
+                                   href="#"
+                                        onClick=&#34;return false;&#34;>
+                                    <i class="fa-regular fa-compass fa-fw"></i>
+                                    更多
+                                    <i class="fa-solid fa-chevron-down fa-fw"></i>
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                                    <ul class="sub-menu">
+                                        
+                                            <li>
+                                                <a href="/tags/">
+                                                    标签
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/gallery/">
+                                                    图库
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/messageboard/">
+                                                    留言板
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/about/">
+                                                    关于
+                                                </a>
+                                            </li>
+                                        
+                                    </ul>
+                                
+                            </li>
+                    
+                    
+                        <li class="navbar-item search search-popup-trigger">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </li>
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                    <div class="icon-item search search-popup-trigger"><i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives/"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories/"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/talking/"
+                        >
+                            <span>
+                                说说
+                            </span>
+                            
+                                <i class="fa-regular fa-comment-dots fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/webdocs/"
+                        >
+                            <span>
+                                文档收藏
+                            </span>
+                            
+                                <i class="fa-regular fa-bookmark fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item-sub text-base my-1.5 flex flex-col w-full">
+                        
+                        <div class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary cursor-pointer text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                             navbar-data-toggle="submenu-更多"
+                        >
+                            <span>
+                                更多
+                            </span>
+                            
+                                <i class="fa-solid fa-chevron-right fa-sm fa-fw transition-all"></i>
+                            
+                        </div>
+                        
+
+                        
+                            <div class="flex-col items-start px-2 py-2 hidden" data-target="submenu-更多">
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/tags/">标签</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/gallery/">图库</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/messageboard/">留言板</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/about/">关于</a>
+                                    </div>
+                                
+                            </div>
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                           href="/tags/"
+                        >
+                            <span>标签</span>
+                            <i class="fa-solid fa-tags fa-sm fa-fw"></i>
+                        </a>
+                    </li>
+                
+                    
+                    
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                           href="/about/"
+                        >
+                            <span>关于</span>
+                            <i class="fa-regular fa-user fa-sm fa-fw"></i>
+                        </a>
+                    </li>
+                
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">27</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">6</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">10</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			
+			
+			<img src="/2026/10/20/go-defer/cover.webp" alt="Go 语言中的 defer：常见用法与避坑指南" class="w-full h-60 sm:h-72 md:h-80 object-cover sm:rounded-t-large dark:brightness-75" />
+			
+			<div class="w-full flex items-center absolute bottom-0 justify-start">
+				<h1 class="article-title-cover text-center mx-6 my-6 text-second-text-color bg-background-color-transparent px-4 py-3 text-3xl sm:text-4xl md:text-5xl font-semibold backdrop-blur-lg rounded-xl border border-border-color ">Go 语言中的 defer：常见用法与避坑指南</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/avatar.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">clearlove13</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-20 15:34</span>
+        <span class="mobile">2026-10-20 15:34</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-11-16 09:38:42</span>
+            <span class="mobile">2026-11-16 09:38:42</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/Go/">Go</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/defer/">defer</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%81%BF%E5%9D%91/">避坑</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>28k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>1:43 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div id="article-container" class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<p>写 Go 的人几乎每天都在用 <code>defer</code>：打开文件要 <code>Close</code>，加了锁要 <code>Unlock</code>，拿到 HTTP 响应要 <code>Body.Close()</code>。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 <code>return</code> 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。</p>
 <p>本文先把 <code>defer</code> 的三条核心规则讲清楚，再过一遍高频用法，最后按「坑」逐条排查，每一条都配上可直接运行的最小示例。</p>
 <span id="more"></span>
 
 <h2 id="1-defer-是什么"><a href="#1-defer-是什么" class="headerlink" title="1. defer 是什么"></a>1. defer 是什么</h2><p><code>defer</code> 语句把一个函数调用推迟到<strong>当前函数返回之前</strong>执行。看一个最小示例：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	f, err := os.Open(<span class="string">&quot;demo.txt&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Println(<span class="string">&quot;打开失败:&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 注册：main 返回前自动执行 f.Close()</span></span><br><span class="line">	<span class="keyword">defer</span> f.Close()</span><br><span class="line"></span><br><span class="line">	fmt.Println(<span class="string">&quot;正常处理文件...&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	f, err := os.Open(<span class="string">&quot;demo.txt&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Println(<span class="string">&quot;打开失败:&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 注册：main 返回前自动执行 f.Close()</span></span><br><span class="line">	<span class="keyword">defer</span> f.Close()</span><br><span class="line"></span><br><span class="line">	fmt.Println(<span class="string">&quot;正常处理文件...&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>三点说明：</p>
 <ul>
@@ -176,20 +698,20 @@
 <li>一个函数里可以注册多个 <code>defer</code></li>
 </ul>
 <h2 id="2-三条核心规则"><a href="#2-三条核心规则" class="headerlink" title="2. 三条核心规则"></a>2. 三条核心规则</h2><h3 id="规则一：多个-defer，后进先出（LIFO）"><a href="#规则一：多个-defer，后进先出（LIFO）" class="headerlink" title="规则一：多个 defer，后进先出（LIFO）"></a>规则一：多个 defer，后进先出（LIFO）</h3><p><code>defer</code> 的执行顺序像栈：<strong>最后注册的最先执行</strong>。</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;1 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;2 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;3 号 defer&quot;</span>)</span><br><span class="line">	fmt.Println(<span class="string">&quot;函数体跑完了，准备返回&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;1 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;2 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;3 号 defer&quot;</span>)</span><br><span class="line">	fmt.Println(<span class="string">&quot;函数体跑完了，准备返回&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>输出：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">函数体跑完了，准备返回</span><br><span class="line">3 号 defer</span><br><span class="line">2 号 defer</span><br><span class="line">1 号 defer</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">函数体跑完了，准备返回</span><br><span class="line">3 号 defer</span><br><span class="line">2 号 defer</span><br><span class="line">1 号 defer</span><br></pre></td></tr></table></figure></div>
 
 <p>所以注册顺序要和释放顺序相反：先打开 A 再打开 B，就应该先写 <code>defer A.Close()</code>，再写 <code>defer B.Close()</code>——B 先关、A 后关，与获取顺序正好相反，符合依赖关系。</p>
 <h3 id="规则二：参数在-defer-语句执行的那一刻就求值"><a href="#规则二：参数在-defer-语句执行的那一刻就求值" class="headerlink" title="规则二：参数在 defer 语句执行的那一刻就求值"></a>规则二：参数在 defer 语句执行的那一刻就求值</h3><p>真实的调用被推迟了，但<strong>函数和参数的值在写 <code>defer</code> 那一行时就被计算并保存下来</strong>。</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;defer 保存的快照 i =&quot;</span>, i) <span class="comment">// 此刻 i 是 0，快照就是 0</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">	fmt.Println(<span class="string">&quot;返回前的 i =&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;defer 保存的快照 i =&quot;</span>, i) <span class="comment">// 此刻 i 是 0，快照就是 0</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">	fmt.Println(<span class="string">&quot;返回前的 i =&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>输出：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">返回前的 i = 100</span><br><span class="line">defer 保存的快照 i = 0</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">返回前的 i = 100</span><br><span class="line">defer 保存的快照 i = 0</span><br></pre></td></tr></table></figure></div>
 
 <p>如果想让延迟函数看到「最新值」，套一层闭包：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; fmt.Println(<span class="string">&quot;闭包看到的 i =&quot;</span>, i) &#125;() <span class="comment">// 执行时才取 i</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; fmt.Println(<span class="string">&quot;闭包看到的 i =&quot;</span>, i) &#125;() <span class="comment">// 执行时才取 i</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>输出 <code>闭包看到的 i = 100</code>。</p>
 <p>一句话记住：<strong>参数是拍快照，闭包引用是看直播。</strong> 方法调用同理，值接收者在 <code>defer</code> 语句处就会被求值并拷贝一份。</p>
@@ -201,50 +723,50 @@
 <li>真正返回</li>
 </ol>
 <p>对比两个经典例子：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">()</span></span> (result <span class="type">int</span>) &#123; <span class="comment">// 命名返回值</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; result++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> <span class="number">5</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">g</span><span class="params">()</span></span> <span class="type">int</span> &#123; <span class="comment">// 匿名返回值</span></span><br><span class="line">	x := <span class="number">5</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; x++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> x</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">()</span></span> (result <span class="type">int</span>) &#123; <span class="comment">// 命名返回值</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; result++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> <span class="number">5</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">g</span><span class="params">()</span></span> <span class="type">int</span> &#123; <span class="comment">// 匿名返回值</span></span><br><span class="line">	x := <span class="number">5</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; x++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> x</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <ul>
 <li><code>f()</code> 返回 <strong>6</strong>：<code>return 5</code> 先把 <code>result</code> 赋成 5，然后 defer 把它加一，最后返回</li>
 <li><code>g()</code> 返回 <strong>5</strong>：<code>return x</code> 已经把匿名返回值定成 5，defer 改的是局部变量 <code>x</code>，影响不到返回值</li>
 </ul>
 <p>所以：想用 defer 改写返回值（统一给 error 补上下文、失败时清理半成品），必须使用命名返回值。一个实用片段：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">loadConfig</span><span class="params">(path <span class="type">string</span>)</span></span> (cfg Config, err <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			err = fmt.Errorf(<span class="string">&quot;load config %s: %w&quot;</span>, path, err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="keyword">return</span> cfg, readAll(path)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">loadConfig</span><span class="params">(path <span class="type">string</span>)</span></span> (cfg Config, err <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			err = fmt.Errorf(<span class="string">&quot;load config %s: %w&quot;</span>, path, err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="keyword">return</span> cfg, readAll(path)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <h2 id="4-常见用法"><a href="#4-常见用法" class="headerlink" title="4. 常见用法"></a>4. 常见用法</h2><h3 id="4-1-释放资源：紧跟在获取动作后面写"><a href="#4-1-释放资源：紧跟在获取动作后面写" class="headerlink" title="4.1 释放资源：紧跟在获取动作后面写"></a>4.1 释放资源：紧跟在获取动作后面写</h3><p>这是 <code>defer</code> 的头号用途。标准模板永远是「获取 → 判 err → defer 释放」：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">defer</span> f.Close()</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">defer</span> f.Close()</span><br></pre></td></tr></table></figure></div>
 
 <p>同一招适用于 <code>mu.Unlock()</code>、<code>resp.Body.Close()</code>、<code>rows.Close()</code>。</p>
-<h3 id="4-2-计时与打点"><a href="#4-2-计时与打点" class="headerlink" title="4.2 计时与打点"></a>4.2 计时与打点</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">handle</span><span class="params">()</span></span> &#123;</span><br><span class="line">	start := time.Now()</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;handle 耗时 %s&quot;</span>, time.Since(start))</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// 业务逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="4-2-计时与打点"><a href="#4-2-计时与打点" class="headerlink" title="4.2 计时与打点"></a>4.2 计时与打点</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">handle</span><span class="params">()</span></span> &#123;</span><br><span class="line">	start := time.Now()</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;handle 耗时 %s&quot;</span>, time.Since(start))</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// 业务逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>好处是入口处一次注册，任何分支提前 return 都能记到耗时。</p>
 <h3 id="4-3-临时改动全局状态，用完恢复"><a href="#4-3-临时改动全局状态，用完恢复" class="headerlink" title="4.3 临时改动全局状态，用完恢复"></a>4.3 临时改动全局状态，用完恢复</h3><p>测试里最常见：临时替换全局配置，测试结束恢复原样：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> config = <span class="keyword">struct</span> &#123;</span><br><span class="line">	Timeout time.Duration</span><br><span class="line">&#125;&#123;Timeout: <span class="number">30</span> * time.Second&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestPing</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	old := config.Timeout</span><br><span class="line">	config.Timeout = time.Second</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; config.Timeout = old &#125;() <span class="comment">// 保证恢复</span></span><br><span class="line">	<span class="comment">// 测试逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> config = <span class="keyword">struct</span> &#123;</span><br><span class="line">	Timeout time.Duration</span><br><span class="line">&#125;&#123;Timeout: <span class="number">30</span> * time.Second&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestPing</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	old := config.Timeout</span><br><span class="line">	config.Timeout = time.Second</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; config.Timeout = old &#125;() <span class="comment">// 保证恢复</span></span><br><span class="line">	<span class="comment">// 测试逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
-<h3 id="4-4-配合-recover-兜底-panic"><a href="#4-4-配合-recover-兜底-panic" class="headerlink" title="4.4 配合 recover 兜底 panic"></a>4.4 配合 recover 兜底 panic</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;捕获 panic: %v&quot;</span>, r)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure>
+<h3 id="4-4-配合-recover-兜底-panic"><a href="#4-4-配合-recover-兜底-panic" class="headerlink" title="4.4 配合 recover 兜底 panic"></a>4.4 配合 recover 兜底 panic</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;捕获 panic: %v&quot;</span>, r)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure></div>
 
 <p>注意 <code>recover</code> 必须放在 <code>defer</code> 直接调用的函数里才生效，也只能捕获同一个 goroutine 的 panic。这部分展开内容较多，之前单独写过一篇，细节见<a href="/2026/01/27/go-recover/">《Go 里的 recover：如何优雅地兜底 panic》</a>。</p>
-<h2 id="5-避坑指南"><a href="#5-避坑指南" class="headerlink" title="5. 避坑指南"></a>5. 避坑指南</h2><h3 id="坑-1：循环里-defer，资源全堆到函数结束才释放"><a href="#坑-1：循环里-defer，资源全堆到函数结束才释放" class="headerlink" title="坑 1：循环里 defer，资源全堆到函数结束才释放"></a>坑 1：循环里 defer，资源全堆到函数结束才释放</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">process</span><span class="params">(files []<span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	<span class="keyword">for</span> _, name := <span class="keyword">range</span> files &#123;</span><br><span class="line">		f, err := os.Open(name)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">defer</span> f.Close() <span class="comment">// 坏！要等 process 返回才统一关闭</span></span><br><span class="line">		<span class="keyword">if</span> err := handle(f); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="5-避坑指南"><a href="#5-避坑指南" class="headerlink" title="5. 避坑指南"></a>5. 避坑指南</h2><h3 id="坑-1：循环里-defer，资源全堆到函数结束才释放"><a href="#坑-1：循环里-defer，资源全堆到函数结束才释放" class="headerlink" title="坑 1：循环里 defer，资源全堆到函数结束才释放"></a>坑 1：循环里 defer，资源全堆到函数结束才释放</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">process</span><span class="params">(files []<span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	<span class="keyword">for</span> _, name := <span class="keyword">range</span> files &#123;</span><br><span class="line">		f, err := os.Open(name)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">defer</span> f.Close() <span class="comment">// 坏！要等 process 返回才统一关闭</span></span><br><span class="line">		<span class="keyword">if</span> err := handle(f); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>10 万个文件意味着同时打开 10 万个句柄，很容易撞上 <code>too many open files</code>。正确做法是把「单个文件」的处理抽成函数，让 <code>defer</code> 在每次处理结束时立刻生效：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">processOne</span><span class="params">(name <span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	f, err := os.Open(name)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> f.Close() <span class="comment">// processOne 一返回就关闭</span></span><br><span class="line">	<span class="keyword">return</span> handle(f)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">processOne</span><span class="params">(name <span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	f, err := os.Open(name)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> f.Close() <span class="comment">// processOne 一返回就关闭</span></span><br><span class="line">	<span class="keyword">return</span> handle(f)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
-<h3 id="坑-2：err-还没判断，就先-defer-f-Close"><a href="#坑-2：err-还没判断，就先-defer-f-Close" class="headerlink" title="坑 2：err 还没判断，就先 defer f.Close()"></a>坑 2：err 还没判断，就先 defer f.Close()</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">defer</span> f.Close() <span class="comment">// 坏！</span></span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err <span class="comment">// f 是 nil，返回前 nil.Close() 直接 panic</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="坑-2：err-还没判断，就先-defer-f-Close"><a href="#坑-2：err-还没判断，就先-defer-f-Close" class="headerlink" title="坑 2：err 还没判断，就先 defer f.Close()"></a>坑 2：err 还没判断，就先 defer f.Close()</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">defer</span> f.Close() <span class="comment">// 坏！</span></span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err <span class="comment">// f 是 nil，返回前 nil.Close() 直接 panic</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>打开失败时 <code>f</code> 是 <code>nil</code>，<code>defer</code> 注册的 <code>nil.Close()</code> 会在 return 时触发，把一个普通错误放大成 panic。修复方式就是 4.1 的模板：先判 <code>err</code>，再写 <code>defer</code>。</p>
-<h3 id="坑-3：defer-mu-Lock-——锁根本没加上"><a href="#坑-3：defer-mu-Lock-——锁根本没加上" class="headerlink" title="坑 3：defer mu.Lock()——锁根本没加上"></a>坑 3：defer mu.Lock()——锁根本没加上</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">bad</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	<span class="keyword">defer</span> mu.Lock() <span class="comment">// 坏！锁要到函数返回时才加，临界区完全没被保护</span></span><br><span class="line">	<span class="comment">// ... 这里其实是「无锁」执行的</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="坑-3：defer-mu-Lock-——锁根本没加上"><a href="#坑-3：defer-mu-Lock-——锁根本没加上" class="headerlink" title="坑 3：defer mu.Lock()——锁根本没加上"></a>坑 3：defer mu.Lock()——锁根本没加上</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">bad</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	<span class="keyword">defer</span> mu.Lock() <span class="comment">// 坏！锁要到函数返回时才加，临界区完全没被保护</span></span><br><span class="line">	<span class="comment">// ... 这里其实是「无锁」执行的</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p><code>defer</code> 延迟的是 <code>Lock</code> 这个调用本身，于是整个函数体都在没锁的状态下跑，返回时才加锁，而且再也不会 <code>Unlock</code>。正确姿势：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">good</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> mu.Unlock()</span><br><span class="line">	<span class="comment">// ... 临界区</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">good</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> mu.Unlock()</span><br><span class="line">	<span class="comment">// ... 临界区</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>顺带一个变体：写了 <code>defer mu.Unlock()</code> 之后又在函数中途手动 <code>mu.Unlock()</code>，返回时 defer 再解锁一次，直接 <code>panic: sync: unlock of unlocked mutex</code>。同一个锁要么全程交给 defer 管，要么自己管，别混着来。</p>
 <h3 id="坑-4：以为拿到的是最新值，其实是快照"><a href="#坑-4：以为拿到的是最新值，其实是快照" class="headerlink" title="坑 4：以为拿到的是最新值，其实是快照"></a>坑 4：以为拿到的是最新值，其实是快照</h3><p>规则二在循环里的样子：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i := <span class="number">1</span>; i &lt;= <span class="number">3</span>; i++ &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;快照:&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i := <span class="number">1</span>; i &lt;= <span class="number">3</span>; i++ &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;快照:&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>每个 <code>defer</code> 保存的都是当轮 <code>i</code> 的快照（1、2、3），最后按 LIFO 输出 <code>3 2 1</code>。注意：即使 Go 1.22 之后循环变量每轮迭代都是新变量，这条也<strong>不变</strong>——那改变的是闭包捕获语义，defer 参数的求值时机始终是 defer 语句执行的那一刻。想拿到「函数退出那一刻的值」，套一层闭包即可。</p>
-<h3 id="坑-5：os-Exit-log-Fatal-会跳过所有-defer"><a href="#坑-5：os-Exit-log-Fatal-会跳过所有-defer" class="headerlink" title="坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer"></a>坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;清理资源&quot;</span>) <span class="comment">// 永远不会执行</span></span><br><span class="line">	<span class="keyword">if</span> failed &#123;</span><br><span class="line">		os.Exit(<span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="坑-5：os-Exit-log-Fatal-会跳过所有-defer"><a href="#坑-5：os-Exit-log-Fatal-会跳过所有-defer" class="headerlink" title="坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer"></a>坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;清理资源&quot;</span>) <span class="comment">// 永远不会执行</span></span><br><span class="line">	<span class="keyword">if</span> failed &#123;</span><br><span class="line">		os.Exit(<span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p><code>os.Exit</code> 直接终止进程，不执行任何 defer；<code>log.Fatal</code> 内部就是 <code>os.Exit(1)</code>，同样跳过。外部 <code>kill -9</code>、断电就更不用说了。所以 main 里必须在退出前完成的清理（flush 缓冲、删临时文件），要在 <code>os.Exit</code> 之前显式调用，别指望 defer。</p>
-<h3 id="坑-6：defer-只属于注册它的那个-goroutine"><a href="#坑-6：defer-只属于注册它的那个-goroutine" class="headerlink" title="坑 6：defer 只属于注册它的那个 goroutine"></a>坑 6：defer 只属于注册它的那个 goroutine</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;子 goroutine 的 defer&quot;</span>)</span><br><span class="line">		<span class="comment">// ...</span></span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// main 很快返回，子 goroutine 连同它的 defer 一起被带走</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="坑-6：defer-只属于注册它的那个-goroutine"><a href="#坑-6：defer-只属于注册它的那个-goroutine" class="headerlink" title="坑 6：defer 只属于注册它的那个 goroutine"></a>坑 6：defer 只属于注册它的那个 goroutine</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;子 goroutine 的 defer&quot;</span>)</span><br><span class="line">		<span class="comment">// ...</span></span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// main 很快返回，子 goroutine 连同它的 defer 一起被带走</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>main 返回（进程结束）时，其它 goroutine 会被直接终止，它们的 defer 没有机会执行；<code>recover</code> 也只能捕获同一个 goroutine 的 panic。跨 goroutine 的收尾要靠 <code>sync.WaitGroup</code>、<code>context</code> 取消这类机制来配合。</p>
 <h3 id="坑-7：为了性能不用-defer？大可不必"><a href="#坑-7：为了性能不用-defer？大可不必" class="headerlink" title="坑 7：为了性能不用 defer？大可不必"></a>坑 7：为了性能不用 defer？大可不必</h3><p>早期版本（Go 1.13 之前）defer 确实有额外开销，但 Go 1.14 引入 open-coded defer 之后，常见场景的开销已经接近一次普通函数调用。为了省这点开销在循环里手动 Close、漏掉异常路径，才是真正的 bug 来源。真正值得优化的还是坑 1 那种「defer 堆积导致资源延迟释放」，而不是 defer 本身。</p>
@@ -260,138 +782,557 @@
 </ul>
 <p>把三条规则记牢——LIFO、参数拍快照、函数返回前才执行——上面所有的坑都能自己推导出来。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
-<li>The Go Blog：<a target="_blank" rel="noopener" href="https://go.dev/blog/defer-panic-and-recover">Defer, Panic, and Recover</a></li>
-<li>Go 语言规范：<a target="_blank" rel="noopener" href="https://go.dev/ref/spec#Defer_statements">Defer statements</a></li>
-<li>Effective Go：<a target="_blank" rel="noopener" href="https://go.dev/doc/effective_go#defer">defer</a></li>
+<li>The Go Blog：<a class="link"   target="_blank" rel="noopener" href="https://go.dev/blog/defer-panic-and-recover" >Defer, Panic, and Recover<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li>Go 语言规范：<a class="link"   target="_blank" rel="noopener" href="https://go.dev/ref/spec#Defer_statements" >Defer statements<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li>Effective Go：<a class="link"   target="_blank" rel="noopener" href="https://go.dev/doc/effective_go#defer" >defer<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
 <li>本站：<a href="/2026/01/27/go-recover/">《Go 里的 recover：如何优雅地兜底 panic》</a></li>
 </ul>
-</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io">clearlove13</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yudongyouqing.github.io/2026/10/20/go-defer/">https://yudongyouqing.github.io/2026/10/20/go-defer/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://yudongyouqing.github.io" target="_blank">Can you feel my world</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Go/">Go</a><a class="post-meta__tags" href="/tags/defer/">defer</a><a class="post-meta__tags" href="/tags/%E9%81%BF%E5%9D%91/">避坑</a></div><div class="post-share"><div class="social-share" data-image="/2026/10/20/go-defer/cover.webp" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"><img class="cover" src="/2026/10/20/goframe-indexed-array-binding/cover.webp" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</div></div><div class="info-2"><div class="info-item-1">同一个请求，PHP 侧筛选出 0 条，Go 侧返回 1 条。参数等于没传，而且接口不报错、日志无异常、返回 200。 这是我最近把一个 PHP(Laravel 6) 系统迁到 Go(GoFrame v2.10.0) 时遇到的真实分叉。排查到最后，我的结论是：GoFrame 对带索引数组参数（ids[0]=1&amp;ids[1]=2）是「半吊子支持」——解析层认了，结构体绑定层把它无声丢弃。这比完全不支持更坑，因为你能在 GetQueryMap() 里亲眼看到数据，却怎么都绑不进结构体字段。 这篇文章记录完整的三层排查、三形态实测数据和最终方案的取舍过程。   1. 联调分叉：计数 0 对 1先交代背景。PHP 的 query 解析器原生把 a[0]=1&amp;a[1]=2 解析成数组——这是历史包袱，也是事实标准。axios + qs 的默认配置 arrayFormat: &#39;indices&#39; 产出的正是这种形态，所以我们的存量前端流量全是它，线上跑了多年没出过问题。 迁移到 Go 之后，两端联调对照实测，分叉出现了：同一个带筛选的请求，PHP 侧按预期筛出 0...</div></div></div></a><a class="pagination-related" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账"><img class="cover" src="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/cover.webp" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">一个流水水水水账</div></div><div class="info-2"><div class="info-item-1">在飞机上不知道干什么，忽然想起来自己之前嚷嚷着要写一下大作文，因为自己两星期之后就21岁了，却还没有象征性得写过阶段性大作文 既然写自传文章，那我还是从最近发生的开始写吧，因为过去的事情大多我已记不太清了，所以有些地方写的简略一点在所难免 就从打重庆开始说起吧，其实我本来是没有想过打重庆的，因为毕竟太远了，加上也没怎么训练实力也就铁牌，所以意愿不高，当然当时想着可以在南昌这种近的地方打星去感受一下热爱的感觉，由于种种因素没有去成，赛时姑且认为负贡献吧，就写了一个签到还wa了一发，当时石头人让我上机写，脑子直接糊成一坨浆糊，重新整理一下就好了，但还是wa了一发，OK这之后就没有我的事了，整个人有点懵，看着白熊跟石头人说说笑笑，我也跟着笑，然后他们就过题了😁，说到重庆，吃了不挂科火锅，我甚至没意识到不挂科是名字，吃了两口简直辣到发昏，已经说不出来话了，也是成功完成喷射任务了，也是面基了长相，说实话我都没想到说那么s的话，长的那么老实，甚至吃完火锅马上就回去打开cf，写他的dsu on tree（正赛还想看我板子有没有，但我没点这个科技树😂），还是有点感慨的，因为自己也没有一个人出...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/01/27/go-recover/" title="Go 里的 recover：如何优雅地兜底 panic（写给初学者）"><img class="cover" src="/2026/01/27/go-recover/cover.webp" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-27</div><div class="info-item-2">Go 里的 recover：如何优雅地兜底 panic（写给初学者）</div></div><div class="info-2"><div class="info-item-1">很多 Go 初学者第一次遇到 panic 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：用 recover 可以救回来。 但 recover 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 panic / defer / recover 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。   1. panic &#x2F; defer &#x2F; recover 到底是什么关系？ panic  让当前 goroutine 进入异常流程：从当前函数开始向上“展开调用栈”（stack unwinding） 在展开过程中，会执行每一层函数里注册的 defer   defer  延迟执行：函数返回前执行 发生 panic 时也会执行（这是 recover 能工作的原因）   recover  作用：在 panic 发生后，把 panic 的值取出来，并阻止程序继续崩溃 只能在 defer 调用的函数里生效，否则返回 nil    一句话总结：panic 触发异常 -&gt; defer 仍会执行 -&gt; defer 里调用 recover...</div></div></div></a><a class="pagination-related" href="/2026/01/23/go-context/" title="Go标准库中的context包"><img class="cover" src="/2026/01/23/go-context/cover.webp" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-01-23</div><div class="info-item-2">Go标准库中的context包</div></div><div class="info-2"><div class="info-item-1">本文总结了 Go 标准库中 context 的常见用法，包括创建、传递、取消、超时部分场景。   1.context包负责Go当中的上下文传递机制1.1 问题场景 一个 HTTP 请求可能启动多个 goroutine（调用下游服务、查数据库、写日志） 如果客户端断开连接，需要取消所有相关操作，避免浪费资源 如果某个操作超时，需要及时停止，而不是一直等待  1.2 传统方式的问题 没有统一的取消机制，每个 goroutine 需要自己管理停止逻辑 难以在调用链中传递取消信号  1.3 context 的价值 统一取消机制：一个 ctx.Done() 可以通知所有相关 goroutine 自动传播：子 context 会继承父 context 的取消状态 超时控制：可以设置超时时间，自动取消  2.context的接口实现1234567// 主要包含四个方法type Context interface &#123;  Deadline() (deadline time.Time, ok bool)  // 获取截止时间  Done() &lt;-chan struct&#123;&#...</div></div></div></a><a class="pagination-related" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"><img class="cover" src="/2026/10/20/goframe-indexed-array-binding/cover.webp" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-20</div><div class="info-item-2">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</div></div><div class="info-2"><div class="info-item-1">同一个请求，PHP 侧筛选出 0 条，Go 侧返回 1 条。参数等于没传，而且接口不报错、日志无异常、返回 200。 这是我最近把一个 PHP(Laravel 6) 系统迁到 Go(GoFrame v2.10.0) 时遇到的真实分叉。排查到最后，我的结论是：GoFrame 对带索引数组参数（ids[0]=1&amp;ids[1]=2）是「半吊子支持」——解析层认了，结构体绑定层把它无声丢弃。这比完全不支持更坑，因为你能在 GetQueryMap() 里亲眼看到数据，却怎么都绑不进结构体字段。 这篇文章记录完整的三层排查、三形态实测数据和最终方案的取舍过程。   1. 联调分叉：计数 0 对 1先交代背景。PHP 的 query 解析器原生把 a[0]=1&amp;a[1]=2 解析成数组——这是历史包袱，也是事实标准。axios + qs 的默认配置 arrayFormat: &#39;indices&#39; 产出的正是这种形态，所以我们的存量前端流量全是它，线上跑了多年没出过问题。 迁移到 Go 之后，两端联调对照实测，分叉出现了：同一个带筛选的请求，PHP 侧按预期筛出 0...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">clearlove13</div><div class="author-info-description">Golang 后端开发 / 技术爱好者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yudongyouqing"><i class="fab fa-github"></i><span>GitHub</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">记录技术学习、调试经验和文档收藏。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-defer-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-text">1. defer 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%89%E6%9D%A1%E6%A0%B8%E5%BF%83%E8%A7%84%E5%88%99"><span class="toc-text">2. 三条核心规则</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%84%E5%88%99%E4%B8%80%EF%BC%9A%E5%A4%9A%E4%B8%AA-defer%EF%BC%8C%E5%90%8E%E8%BF%9B%E5%85%88%E5%87%BA%EF%BC%88LIFO%EF%BC%89"><span class="toc-text">规则一：多个 defer，后进先出（LIFO）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%84%E5%88%99%E4%BA%8C%EF%BC%9A%E5%8F%82%E6%95%B0%E5%9C%A8-defer-%E8%AF%AD%E5%8F%A5%E6%89%A7%E8%A1%8C%E7%9A%84%E9%82%A3%E4%B8%80%E5%88%BB%E5%B0%B1%E6%B1%82%E5%80%BC"><span class="toc-text">规则二：参数在 defer 语句执行的那一刻就求值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%84%E5%88%99%E4%B8%89%EF%BC%9A%E5%9C%A8%E3%80%8C%E5%87%BD%E6%95%B0%E8%BF%94%E5%9B%9E%E5%89%8D%E3%80%8D%E6%89%A7%E8%A1%8C%EF%BC%8C%E8%80%8C%E4%B8%8D%E6%98%AF%E3%80%8C%E4%BD%9C%E7%94%A8%E5%9F%9F%E7%BB%93%E6%9D%9F%E6%97%B6%E3%80%8D"><span class="toc-text">规则三：在「函数返回前」执行，而不是「作用域结束时」</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-return-%E7%9A%84%E4%B8%89%E6%AD%A5%E8%B5%B0%EF%BC%9Adefer-%E5%92%8C%E8%BF%94%E5%9B%9E%E5%80%BC%E8%B0%81%E5%85%88%E8%B0%81%E5%90%8E"><span class="toc-text">3. return 的三步走：defer 和返回值谁先谁后</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%B8%B8%E8%A7%81%E7%94%A8%E6%B3%95"><span class="toc-text">4. 常见用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E9%87%8A%E6%94%BE%E8%B5%84%E6%BA%90%EF%BC%9A%E7%B4%A7%E8%B7%9F%E5%9C%A8%E8%8E%B7%E5%8F%96%E5%8A%A8%E4%BD%9C%E5%90%8E%E9%9D%A2%E5%86%99"><span class="toc-text">4.1 释放资源：紧跟在获取动作后面写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E8%AE%A1%E6%97%B6%E4%B8%8E%E6%89%93%E7%82%B9"><span class="toc-text">4.2 计时与打点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E4%B8%B4%E6%97%B6%E6%94%B9%E5%8A%A8%E5%85%A8%E5%B1%80%E7%8A%B6%E6%80%81%EF%BC%8C%E7%94%A8%E5%AE%8C%E6%81%A2%E5%A4%8D"><span class="toc-text">4.3 临时改动全局状态，用完恢复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E9%85%8D%E5%90%88-recover-%E5%85%9C%E5%BA%95-panic"><span class="toc-text">4.4 配合 recover 兜底 panic</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E9%81%BF%E5%9D%91%E6%8C%87%E5%8D%97"><span class="toc-text">5. 避坑指南</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-1%EF%BC%9A%E5%BE%AA%E7%8E%AF%E9%87%8C-defer%EF%BC%8C%E8%B5%84%E6%BA%90%E5%85%A8%E5%A0%86%E5%88%B0%E5%87%BD%E6%95%B0%E7%BB%93%E6%9D%9F%E6%89%8D%E9%87%8A%E6%94%BE"><span class="toc-text">坑 1：循环里 defer，资源全堆到函数结束才释放</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-2%EF%BC%9Aerr-%E8%BF%98%E6%B2%A1%E5%88%A4%E6%96%AD%EF%BC%8C%E5%B0%B1%E5%85%88-defer-f-Close"><span class="toc-text">坑 2：err 还没判断，就先 defer f.Close()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-3%EF%BC%9Adefer-mu-Lock-%E2%80%94%E2%80%94%E9%94%81%E6%A0%B9%E6%9C%AC%E6%B2%A1%E5%8A%A0%E4%B8%8A"><span class="toc-text">坑 3：defer mu.Lock()——锁根本没加上</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-4%EF%BC%9A%E4%BB%A5%E4%B8%BA%E6%8B%BF%E5%88%B0%E7%9A%84%E6%98%AF%E6%9C%80%E6%96%B0%E5%80%BC%EF%BC%8C%E5%85%B6%E5%AE%9E%E6%98%AF%E5%BF%AB%E7%85%A7"><span class="toc-text">坑 4：以为拿到的是最新值，其实是快照</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-5%EF%BC%9Aos-Exit-log-Fatal-%E4%BC%9A%E8%B7%B3%E8%BF%87%E6%89%80%E6%9C%89-defer"><span class="toc-text">坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-6%EF%BC%9Adefer-%E5%8F%AA%E5%B1%9E%E4%BA%8E%E6%B3%A8%E5%86%8C%E5%AE%83%E7%9A%84%E9%82%A3%E4%B8%AA-goroutine"><span class="toc-text">坑 6：defer 只属于注册它的那个 goroutine</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91-7%EF%BC%9A%E4%B8%BA%E4%BA%86%E6%80%A7%E8%83%BD%E4%B8%8D%E7%94%A8-defer%EF%BC%9F%E5%A4%A7%E5%8F%AF%E4%B8%8D%E5%BF%85"><span class="toc-text">坑 7：为了性能不用 defer？大可不必</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E5%B0%8F%E7%BB%93%EF%BC%9A%E4%B8%80%E4%BB%BD-defer-%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95"><span class="toc-text">6. 小结：一份 defer 检查清单</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"><img src="/2026/11/16/claude-memory-takeaways/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"/></a><div class="content"><a class="title" href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行">Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</a><time datetime="2026-11-16T01:24:01.000Z" title="发表于 2026-11-16 09:24:01">2026-11-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"><img src="/2026/10/20/goframe-indexed-array-binding/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"/></a><div class="content"><a class="title" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</a><time datetime="2026-10-20T08:22:49.000Z" title="发表于 2026-10-20 16:22:49">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南"><img src="/2026/10/20/go-defer/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go 语言中的 defer：常见用法与避坑指南"/></a><div class="content"><a class="title" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南">Go 语言中的 defer：常见用法与避坑指南</a><time datetime="2026-10-20T07:34:00.000Z" title="发表于 2026-10-20 15:34:00">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账"><img src="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="一个流水水水水账"/></a><div class="content"><a class="title" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账">一个流水水水水账</a><time datetime="2026-06-15T16:00:00.000Z" title="发表于 2026-06-16 00:00:00">2026-06-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法"><img src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="中文分词-最大匹配算法"/></a><div class="content"><a class="title" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法">中文分词-最大匹配算法</a><time datetime="2026-06-04T13:31:33.000Z" title="发表于 2026-06-04 21:31:33">2026-06-04</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/images/home-sunset.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2026 By clearlove13</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
-  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
-  const option = {"data-lang":"zh-CN","data-mapping":"pathname","data-input-position":"top","data-reactions-enabled":1}
 
-  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+		</div>
 
-  const createScriptElement = config => {
-    const ele = document.createElement('script')
-    Object.entries(config).forEach(([key, value]) => {
-      ele.setAttribute(key, value)
-    })
-    return ele
-  }
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> Go 语言中的 defer：常见用法与避坑指南</li>
+        <li><strong>作者:</strong> clearlove13</li>
+        <li><strong>创建于
+                :</strong> 2026-10-20 15:34:00</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-11-16 09:38:42
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://yudongyouqing.github.io/2026/10/20/go-defer/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
 
-  const loadGiscus = (el = document, key) => {
-    const mappingConfig = isShuoshuo
-      ? { 'data-mapping': 'specific', 'data-term': key }
-      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
 
-    const giscusConfig = {
-      src: 'https://giscus.app/client.js',
-      'data-repo': 'yudongyouqing/yudongyouqing.github.io',
-      'data-repo-id': 'R_kgDOQ-xeoQ',
-      'data-category-id': 'DIC_kwDOQ-xeoc4C1UgL',
-      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
-      'data-reactions-enabled': '1',
-      crossorigin: 'anonymous',
-      async: true,
-      ...option,
-      ...mappingConfig
-    }
+		</div>
+		
 
-    const scriptElement = createScriptElement(giscusConfig)
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Go/">#Go</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/defer/">#defer</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%81%BF%E5%9D%91/">#避坑</a>&nbsp;
+			</li>
+			
+		</ul>
+		
 
-    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+		
 
-    if (isShuoshuo) {
-      window.shuoshuoComment.destroyGiscus = () => {
-        if (el.children.length) {
-          el.innerHTML = ''
-          el.classList.add('no-comment')
-        }
-      }
-    }
-  }
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			<div class="article-prev border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="prev" rel="prev" href="/2026/10/20/goframe-indexed-array-binding/">
+					<span class="left arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-left"></i>
+					</span>
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</span>
+						<span class="post-nav-item">上一篇</span>
+					</span>
+				</a>
+			</div>
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">一个流水水水水账</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
 
-  const changeGiscusTheme = theme => {
-    const iframe = document.querySelector('#giscus-wrap iframe')
-    if (iframe) {
-      const message = {
-        giscus: {
-          setConfig: {
-            theme: getGiscusTheme(theme)
-          }
-        }
-      }
-      iframe.contentWindow.postMessage(message, 'https://giscus.app')
-    }
-  }
 
-  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
 
-  if (isShuoshuo) {
-    'Giscus' === 'Giscus'
-      ? window.shuoshuoComment = { loadComment: loadGiscus }
-      : window.loadOtherComment = loadGiscus
-    return
-  }
+        
+            
+    <div id="giscus-container"></div>
+    <script data-swup-reload-script defer>
+        (function() {
+            const containerId = "giscus-container";
+            const mapping = "pathname";
+            const lang = "zh-CN";
+            const inputPosition = "top";
+            const reactionsEnabled = "1" === "1";
+            const emitMetadata = "1" === "1";
+            const strict = "0" === "1";
+            const loading = "lazy";
 
-  if ('Giscus' === 'Giscus' || !true) {
-    if (true) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
-    else loadGiscus()
-  } else {
-    window.loadOtherComment = loadGiscus
-  }
-})()</script></div><script src="/js/footer-bg.js"></script><script src="/js/tag-cloud.js?v=20261113c"></script><script src="/js/readmode-extras.js?v=20261113c"></script><script src="/js/music-player.js?v=20260617-cover"></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
-  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+            const getTerm = () => {
+                if (mapping === "pathname") return location.pathname;
+                if (mapping === "url") return location.href;
+                if (mapping === "title") return document.title;
+                if (mapping === "og:title") {
+                    const ogTitle = document.querySelector("meta[property='og:title']");
+                    return ogTitle?.content || document.title;
+                }
+                return "";
+            };
 
-  window.pjax = new Pjax({
-    elements: 'a:not([target="_blank"])',
-    selectors: pjaxSelectors,
-    cacheBust: false,
-    analytics: false,
-    scrollRestoration: false
-  })
+            const sendUpdate = () => {
+                const iframe = document.querySelector("iframe.giscus-frame");
+                if (!iframe) {
+                    return;
+                }
 
-  const triggerPjaxFn = (val) => {
-    if (!val) return
-    Object.values(val).forEach(fn => {
-      try {
-        fn()
-      } catch (err) {
-        console.debug('Pjax callback failed:', err)
-      }
-    })
-  }
+                const setConfig = {
+                    theme: "preferred_color_scheme",
+                    lang,
+                    inputPosition,
+                    reactionsEnabled,
+                    emitMetadata,
+                    strict,
+                };
 
-  document.addEventListener('pjax:send', () => {
-    // removeEventListener
-    btf.removeGlobalFnEvent('pjaxSendOnce')
-    btf.removeGlobalFnEvent('themeChange')
+                if (mapping !== "number") {
+                    const term = getTerm();
+                    if (term) {
+                        setConfig.term = term;
+                    }
+                }
 
-    // reset readmode
-    const $bodyClassList = document.body.classList
-    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+                iframe.contentWindow.postMessage(
+                    { giscus: { setConfig } },
+                    "https://giscus.app",
+                );
+            };
 
-    triggerPjaxFn(window.globalFn.pjaxSend)
-  })
+            const loadGiscus = () => {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    return;
+                }
 
-  document.addEventListener('pjax:complete', () => {
-    btf.removeGlobalFnEvent('pjaxCompleteOnce')
-    document.querySelectorAll('script[data-pjax]').forEach(item => {
-      const newScript = document.createElement('script')
-      const content = item.text || item.textContent || item.innerHTML || ""
-      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
-      newScript.appendChild(document.createTextNode(content))
-      item.parentNode.replaceChild(newScript, item)
-    })
+                const iframe = container.querySelector("iframe.giscus-frame");
+                if (iframe) {
+                    sendUpdate();
+                    return;
+                }
 
-    triggerPjaxFn(window.globalFn.pjaxComplete)
-  })
+                if (container.dataset.giscusInit === "true") {
+                    return;
+                }
 
-  document.addEventListener('pjax:error', e => {
-    if (e.request.status === 404) {
-      false
-        ? pjax.loadUrl('/404.html')
-        : window.location.href = e.request.responseURL
-    }
-  })
-})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
+                const giscusConfig = {
+                    src: "https://giscus.app/client.js",
+                    "data-repo": "yudongyouqing/yudongyouqing.github.io",
+                    "data-repo-id": "R_kgDOQ-xeoQ",
+                    "data-category": "General",
+                    "data-category-id": "DIC_kwDOQ-xeoc4C1UgL",
+                    "data-mapping": mapping,
+                    "data-strict": "0",
+                    "data-reactions-enabled": "1",
+                    "data-emit-metadata": "1",
+                    "data-theme": "preferred_color_scheme",
+                    "data-lang": lang,
+                    "data-input-position": inputPosition,
+                    "data-loading": loading,
+                    crossorigin: "anonymous",
+                    async: true,
+                };
+
+                const giscusScript = document.createElement("script");
+                for (const key in giscusConfig) {
+                    giscusScript.setAttribute(key, giscusConfig[key]);
+                }
+                container.appendChild(giscusScript);
+                container.dataset.giscusInit = "true";
+            };
+
+            const runGiscus = () => {
+                const container = document.getElementById(containerId);
+                if (!container) {
+                    return;
+                }
+
+                if (container.querySelector("iframe.giscus-frame")) {
+                    sendUpdate();
+                    return;
+                }
+
+                loadGiscus();
+            };
+
+            runGiscus();
+        })();
+    </script>
+
+
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">Go 语言中的 defer：常见用法与避坑指南</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-defer-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-text">1. defer 是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E4%B8%89%E6%9D%A1%E6%A0%B8%E5%BF%83%E8%A7%84%E5%88%99"><span class="nav-text">2. 三条核心规则</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%84%E5%88%99%E4%B8%80%EF%BC%9A%E5%A4%9A%E4%B8%AA-defer%EF%BC%8C%E5%90%8E%E8%BF%9B%E5%85%88%E5%87%BA%EF%BC%88LIFO%EF%BC%89"><span class="nav-text">规则一：多个 defer，后进先出（LIFO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%84%E5%88%99%E4%BA%8C%EF%BC%9A%E5%8F%82%E6%95%B0%E5%9C%A8-defer-%E8%AF%AD%E5%8F%A5%E6%89%A7%E8%A1%8C%E7%9A%84%E9%82%A3%E4%B8%80%E5%88%BB%E5%B0%B1%E6%B1%82%E5%80%BC"><span class="nav-text">规则二：参数在 defer 语句执行的那一刻就求值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%84%E5%88%99%E4%B8%89%EF%BC%9A%E5%9C%A8%E3%80%8C%E5%87%BD%E6%95%B0%E8%BF%94%E5%9B%9E%E5%89%8D%E3%80%8D%E6%89%A7%E8%A1%8C%EF%BC%8C%E8%80%8C%E4%B8%8D%E6%98%AF%E3%80%8C%E4%BD%9C%E7%94%A8%E5%9F%9F%E7%BB%93%E6%9D%9F%E6%97%B6%E3%80%8D"><span class="nav-text">规则三：在「函数返回前」执行，而不是「作用域结束时」</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-return-%E7%9A%84%E4%B8%89%E6%AD%A5%E8%B5%B0%EF%BC%9Adefer-%E5%92%8C%E8%BF%94%E5%9B%9E%E5%80%BC%E8%B0%81%E5%85%88%E8%B0%81%E5%90%8E"><span class="nav-text">3. return 的三步走：defer 和返回值谁先谁后</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%B8%B8%E8%A7%81%E7%94%A8%E6%B3%95"><span class="nav-text">4. 常见用法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%87%8A%E6%94%BE%E8%B5%84%E6%BA%90%EF%BC%9A%E7%B4%A7%E8%B7%9F%E5%9C%A8%E8%8E%B7%E5%8F%96%E5%8A%A8%E4%BD%9C%E5%90%8E%E9%9D%A2%E5%86%99"><span class="nav-text">4.1 释放资源：紧跟在获取动作后面写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E8%AE%A1%E6%97%B6%E4%B8%8E%E6%89%93%E7%82%B9"><span class="nav-text">4.2 计时与打点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%B8%B4%E6%97%B6%E6%94%B9%E5%8A%A8%E5%85%A8%E5%B1%80%E7%8A%B6%E6%80%81%EF%BC%8C%E7%94%A8%E5%AE%8C%E6%81%A2%E5%A4%8D"><span class="nav-text">4.3 临时改动全局状态，用完恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E9%85%8D%E5%90%88-recover-%E5%85%9C%E5%BA%95-panic"><span class="nav-text">4.4 配合 recover 兜底 panic</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%81%BF%E5%9D%91%E6%8C%87%E5%8D%97"><span class="nav-text">5. 避坑指南</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-1%EF%BC%9A%E5%BE%AA%E7%8E%AF%E9%87%8C-defer%EF%BC%8C%E8%B5%84%E6%BA%90%E5%85%A8%E5%A0%86%E5%88%B0%E5%87%BD%E6%95%B0%E7%BB%93%E6%9D%9F%E6%89%8D%E9%87%8A%E6%94%BE"><span class="nav-text">坑 1：循环里 defer，资源全堆到函数结束才释放</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-2%EF%BC%9Aerr-%E8%BF%98%E6%B2%A1%E5%88%A4%E6%96%AD%EF%BC%8C%E5%B0%B1%E5%85%88-defer-f-Close"><span class="nav-text">坑 2：err 还没判断，就先 defer f.Close()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-3%EF%BC%9Adefer-mu-Lock-%E2%80%94%E2%80%94%E9%94%81%E6%A0%B9%E6%9C%AC%E6%B2%A1%E5%8A%A0%E4%B8%8A"><span class="nav-text">坑 3：defer mu.Lock()——锁根本没加上</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-4%EF%BC%9A%E4%BB%A5%E4%B8%BA%E6%8B%BF%E5%88%B0%E7%9A%84%E6%98%AF%E6%9C%80%E6%96%B0%E5%80%BC%EF%BC%8C%E5%85%B6%E5%AE%9E%E6%98%AF%E5%BF%AB%E7%85%A7"><span class="nav-text">坑 4：以为拿到的是最新值，其实是快照</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-5%EF%BC%9Aos-Exit-log-Fatal-%E4%BC%9A%E8%B7%B3%E8%BF%87%E6%89%80%E6%9C%89-defer"><span class="nav-text">坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-6%EF%BC%9Adefer-%E5%8F%AA%E5%B1%9E%E4%BA%8E%E6%B3%A8%E5%86%8C%E5%AE%83%E7%9A%84%E9%82%A3%E4%B8%AA-goroutine"><span class="nav-text">坑 6：defer 只属于注册它的那个 goroutine</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9D%91-7%EF%BC%9A%E4%B8%BA%E4%BA%86%E6%80%A7%E8%83%BD%E4%B8%8D%E7%94%A8-defer%EF%BC%9F%E5%A4%A7%E5%8F%AF%E4%B8%8D%E5%BF%85"><span class="nav-text">坑 7：为了性能不用 defer？大可不必</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E5%B0%8F%E7%BB%93%EF%BC%9A%E4%B8%80%E4%BB%BD-defer-%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95"><span class="nav-text">6. 小结：一份 defer 检查清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-text">参考</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2026</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart" style="color: #0f766e"></i>&nbsp;&nbsp;<a href="/">clearlove13</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 10 篇文章
+                    </span>
+                    
+                        <span>
+                            共 16k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script async data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+            
+                
+        
+                
+        
+                
+
+                    
+                        <script data-swup-reload-script src="/js/redefine-compat.js?v=20261119f"></script>
+                    
+        
+                
+
+                    
+                        <script data-swup-reload-script src="/js/tag-cloud.js?v=orb7"></script>
+                    
+        
+                
+
+                    
+                        <script data-swup-reload-script src="/js/music-player.js?v=20261119"></script>
+                    
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+		<li class="right-bottom-tools rss flex justify-center items-center">
+			<a class="flex justify-center items-center" href="/atom.xml" target="_blank">
+				<i class="fa-regular fa-rss"></i>
+			</a>
+		</li>
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+	<div class="search-pop-overlay">
+	<div class="popup search-popup">
+		<div class="search-header">
+			<span class="search-input-field-pre">
+				<i class="fa-solid fa-keyboard"></i>
+			</span>
+			<div class="search-input-container">
+				<input autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="站内搜索您需要的内容..." spellcheck="false" type="search" class="search-input">
+			</div>
+			<span class="popup-btn-close">
+				<i class="fa-solid fa-times"></i>
+			</span>
+		</div>
+		<div id="search-result">
+			<div id="no-result">
+				<i class="fa-solid fa-spinner fa-spin-pulse fa-5x fa-fw"></i>
+			</div>
+		</div>
+	</div>
+</div>
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

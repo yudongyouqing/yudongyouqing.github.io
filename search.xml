@@ -1,0 +1,1174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</title>
+    <url>/2026/11/16/claude-memory-takeaways/</url>
+    <content><![CDATA[<p>Anthropic 十一月初发了一篇讲智能体记忆的文章，说了一件挺根本的事：Claude 要从经验里学习，就必须在<strong>不知道未来会发生什么</strong>的时候，先决定什么值得记住。全文翻译放在<a href="/2026/11/13/agent-memory-components/">这里</a>（双语对照，带原文全部引用链接）。</p>
+<p>这篇不重复原文内容，只写我自己的三个收获和一个联想。都是我看完之后过了几天还留在脑子里的东西。</p>
+<span id="more"></span>
+
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>记忆系统的第一性问题不是”怎么存”，是”<strong>该记什么</strong>“。存的能力（文件夹、数据库、检索）早就过剩了，判断力才是稀缺的——判断哪些东西值得从日志里捞出来变成知识。整篇文章的所有实验，本质上都在测这个判断力。</p>
+<h2 id="1-记什么，比怎么记重要：413-个文件输给-9-个"><a href="#1-记什么，比怎么记重要：413-个文件输给-9-个" class="headerlink" title="1. 记什么，比怎么记重要：413 个文件输给 9 个"></a>1. 记什么，比怎么记重要：413 个文件输给 9 个</h2><p>文章里最狠的一组对比：让两个模型玩宝可梦，各自管自己的记忆文件夹。</p>
+<ul>
+<li>Sonnet 3.7：什么都存，每场战斗、每件道具、每个 NPC 一个文件——<strong>225 个文件夹、413 个文件</strong>，拿了 1 枚徽章。到后期它一半的步数花在整理记忆而不是玩游戏上。</li>
+<li>Fable 5：只存游戏<strong>没告诉它</strong>的东西——战术、计划、验证过的规则——9 个文件，4 枚徽章。</li>
+</ul>
+<p>关键区别不是勤奋，是取舍。玩家有多少钱、站在地图哪里，屏幕上随时读得到，存下来就是负资产：会过时、要维护、还会把真正重要的东西淹没掉。Fable 5 那条”连续三个精灵球失败就改变投球节奏”的笔记，才是屏幕上读不到、不写下来就会消失的知识。</p>
+<p>写代码注释和文档的时候，我经常想起这 413 个文件——把代码里一眼能读出来的东西复述进注释里，就是 Sonnet 3.7 干的事。</p>
+<h2 id="2-做梦：有时间回望，才有资格向前"><a href="#2-做梦：有时间回望，才有资格向前" class="headerlink" title="2. 做梦：有时间回望，才有资格向前"></a>2. 做梦：有时间回望，才有资格向前</h2><p>会话内当场写记忆，本质是<strong>在不知道未来需要什么的时候做预测</strong>，所以一定会错。文章里 Claude 在月见山把宝可梦中心的位置记错了，之后一路信任这条错误笔记，三次摔下同一个悬崖。</p>
+<p>解法是<a href="https://platform.claude.com/docs/en/managed-agents/dreams"><strong>做梦</strong></a>（dreaming，Claude 的真实机制，不是比喻）：空闲时拿记忆笔记<strong>对照会话日志逐条校验</strong>，日志是 ground truth，对不上的笔记改掉。听起来朴素，但工程含义很实在——原始日志别急着删、别无脑压缩，它是记忆唯一能对账的凭据。所有”帮 AI 总结经验”的系统，缺了这份对账凭据就是在给错误笔记盖章。</p>
+<h2 id="3-MEMORY-md-的前-200-行：我天天在用的记忆层级"><a href="#3-MEMORY-md-的前-200-行：我天天在用的记忆层级" class="headerlink" title="3. MEMORY.md 的前 200 行：我天天在用的记忆层级"></a>3. MEMORY.md 的前 200 行：我天天在用的记忆层级</h2><p>文章里记忆分四层：日志 → 笔记 → 表示（wiki）→ 注入上下文。最顶上那层要求极小——注入的 token 是真金白银，一条错笔记会污染每一个新会话，而且指令越长模型越不听话。所以 Claude Code 的 auto memory 只把 <code>MEMORY.md</code> 的前 200 行装进上下文，充当索引：知道有什么、去哪找，细节留在下面几层。</p>
+<p>这套东西我天天在用——这个博客的写作流程就跑在 Claude Code 上。上周我们为了一篇翻译文吵了一整天：tag 怎么打、要不要从首页隐藏、阅读模式长什么样。吵完的约定，第二天全躺在它的记忆文件里了；这周再说”翻一篇新的”，它直接按规矩走，一次都没再问。<strong>文章里那套四层记忆，落地到我这儿就是那 200 行索引加几个约定文件。</strong></p>
+<h2 id="4-表示的价值在抽象：别造比帝国还大的地图"><a href="#4-表示的价值在抽象：别造比帝国还大的地图" class="headerlink" title="4. 表示的价值在抽象：别造比帝国还大的地图"></a>4. 表示的价值在抽象：别造比帝国还大的地图</h2><p>不是所有任务都值得建知识表示。测试里，需要跨文档找信息、要用判断力的任务，wiki 把成绩从 73% 拉到 87%；而单文档搜索就能命中的任务，wiki 毫无增益——甚至有一次 wiki 长到了 203KB，比 115KB 的原文档还大。文章引了博尔赫斯那个制图师的寓言：画了一张和帝国一样大的地图，等于什么也没抽象。</p>
+<p>这让我想起五月写的 <a href="/2026/05/25/llm-wiki-agent-knowledge-layer/">LLM Wiki 与 Agent 知识层</a>——有意思的是，原文里”wiki”这个词引用的正是 Karpathy 那篇方法论（我们当时参考的是中文转述，这次算是接上了源头）。两篇合起来读，结论一致：<strong>知识层的价值在于压缩，不在于收录。</strong> 建表示之前先问一句：它比搜索省了多少次翻找？省不出来的，就是那张 1:1 的地图。</p>
+<h2 id="收尾"><a href="#收尾" class="headerlink" title="收尾"></a>收尾</h2><p>文章留了两个开放问题，我觉得也是做工程时最实际的两问：<strong>记忆该当场写还是离线写</strong>（当场写分散注意力，离线写不够即时），以及<strong>怎么保鲜</strong>（环境变了，记忆会从资产变成毒药，全量校验又太贵）。</p>
+<p>对照着看自己手头的系统——不管是给 AI 建的还是给人建的——大部分问题都能归到这两问上。</p>
+<p>全文翻译在这里：<a href="/2026/11/13/agent-memory-components/">智能体记忆的组成部分</a>。</p>
+]]></content>
+      <categories>
+        <category>AI</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+        <tag>Claude</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>调试 LeetCode 之 “一键补全头文件” 超简教程</title>
+    <url>/2026/01/22/debug-leetcode-auto-include/</url>
+    <content><![CDATA[<blockquote>
+<p>本文 100% 亲测有效，3 步解决 <em>#include &lt;bits&#x2F;stdc++.h&gt;</em> 标红、<code>commoncppproblem2.h</code> 找不到等 IDE 烦恼。  </p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="✨-前置准备"><a href="#✨-前置准备" class="headerlink" title="✨ 前置准备"></a>✨ 前置准备</h2><ol>
+<li><strong>安装 Leetcode</strong>  <ul>
+<li>登录使用不多赘述。</li>
+</ul>
+</li>
+<li><strong>下载「Debug LeetCode」插件</strong>  <ul>
+<li>商店搜索 <em>Debug LeetCode</em>，点击 <em>Install</em>。  </li>
+<li>成功后会在侧边栏看到一个 💡 的 LeetCode 图标。</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>若你尚未配置本地 C&#x2F;C++ 环境，可参考 <a class="link"   href="https://code.visualstudio.com/docs/cpp/config-mingw" >官方文档<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 进行 GCC&#x2F;Clang 安装与 <code>C/C++</code> 扩展配置。</p>
+</blockquote>
+<hr>
+<h2 id="🚀-三步搞定自动补全头文件"><a href="#🚀-三步搞定自动补全头文件" class="headerlink" title="🚀 三步搞定自动补全头文件"></a>🚀 三步搞定自动补全头文件</h2><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>截图</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Step&nbsp;1</strong></td>
+<td>打开任意 LeetCode 题目，点击顶部的 <strong>Debug</strong> 按钮</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/1.png" class="" title="点击 Debug"></td>
+</tr>
+<tr>
+<td><strong>Step&nbsp;2</strong></td>
+<td>首次运行时插件会 <strong>自动生成 main.cpp</strong>，并把缺失的系统头文件一次性补齐</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/2.png" class="" title="自动补齐头文件"></td>
+</tr>
+<tr>
+<td><strong>Step&nbsp;3</strong></td>
+<td>若仍出现 <code>#include &quot;commoncppproblem2.h&quot;</code> 的红色波浪线 —— <strong>添加 include path</strong> 即可</td>
+<td><img src="/2026/01/22/debug-leetcode-auto-include/3.png" class="" title="添加 include path"></td>
+</tr>
+</tbody></table>
+<h3 id="如何添加-include-path？"><a href="#如何添加-include-path？" class="headerlink" title="如何添加 include path？"></a>如何添加 include path？</h3><ol>
+<li>打开命令面板 <code>Ctrl+Shift+P</code> → 输入并选择 <strong>C&#x2F;C++: Edit Configurations (UI)</strong>  </li>
+<li>在 <strong>Include path</strong> 中追加下列目录（替换成你自己的用户名）：</li>
+</ol>
+<div class="code-container" data-rel="Plaintext"><figure class="iseeu highlight plaintext"><table><tr><td class="code"><pre><span class="line">C:\Users\&lt;YourUserName&gt;\AppData\Roaming\Code\User\globalStorage\wangtao0101.debug-leetcode</span><br></pre></td></tr></table></figure></div>
+
+<hr>
+<p><strong>至此，调试环境完美启用！</strong>  </p>
+]]></content>
+      <categories>
+        <category>刷题</category>
+      </categories>
+      <tags>
+        <tag>LeetCode</tag>
+        <tag>VSCode</tag>
+        <tag>C++</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Go标准库中的context包</title>
+    <url>/2026/01/23/go-context/</url>
+    <content><![CDATA[<p>本文总结了 Go 标准库中 <code>context</code> 的常见用法，包括创建、传递、取消、超时部分场景。</p>
+<span id="more"></span>
+
+<h2 id="1-context包负责Go当中的上下文传递机制"><a href="#1-context包负责Go当中的上下文传递机制" class="headerlink" title="1.context包负责Go当中的上下文传递机制"></a>1.context包负责Go当中的上下文传递机制</h2><h3 id="1-1-问题场景"><a href="#1-1-问题场景" class="headerlink" title="1.1 问题场景"></a>1.1 问题场景</h3><ul>
+<li>一个 HTTP 请求可能启动多个 goroutine（调用下游服务、查数据库、写日志）</li>
+<li>如果客户端断开连接，需要取消所有相关操作，避免浪费资源</li>
+<li>如果某个操作超时，需要及时停止，而不是一直等待</li>
+</ul>
+<h3 id="1-2-传统方式的问题"><a href="#1-2-传统方式的问题" class="headerlink" title="1.2 传统方式的问题"></a>1.2 传统方式的问题</h3><ul>
+<li>没有统一的取消机制，每个 goroutine 需要自己管理停止逻辑</li>
+<li>难以在调用链中传递取消信号</li>
+</ul>
+<h3 id="1-3-context-的价值"><a href="#1-3-context-的价值" class="headerlink" title="1.3 context 的价值"></a>1.3 context 的价值</h3><ul>
+<li>统一取消机制：一个 ctx.Done() 可以通知所有相关 goroutine</li>
+<li>自动传播：子 context 会继承父 context 的取消状态</li>
+<li>超时控制：可以设置超时时间，自动取消</li>
+</ul>
+<h2 id="2-context的接口实现"><a href="#2-context的接口实现" class="headerlink" title="2.context的接口实现"></a>2.context的接口实现</h2><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 主要包含四个方法</span></span><br><span class="line"><span class="keyword">type</span> Context <span class="keyword">interface</span> &#123;</span><br><span class="line">  Deadline() (deadline time.Time, ok <span class="type">bool</span>)  <span class="comment">// 获取截止时间</span></span><br><span class="line">  Done() &lt;-<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;                   <span class="comment">// 一个只读的channel，表示当前context是否被取消</span></span><br><span class="line">  Err() <span class="type">error</span>                              <span class="comment">// 返回一个错误信息</span></span><br><span class="line">  Value(key any) any                       <span class="comment">// 最后一个则是一个键值对 存储数据</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="3-context的创建"><a href="#3-context的创建" class="headerlink" title="3.context的创建"></a>3.context的创建</h2><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line">ctx1 := context.Background()</span><br><span class="line">ctx2 := context.TODO()</span><br><span class="line"></span><br><span class="line"><span class="comment">// 两者都不会被取消</span></span><br><span class="line">&lt;-ctx1.Done() <span class="comment">// 永远阻塞</span></span><br><span class="line">&lt;-ctx2.Done() <span class="comment">// 永远阻塞</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 两者只有语义上有差别</span></span><br><span class="line"><span class="comment">// Background()：作为根 context，用于程序入口、测试、顶层逻辑</span></span><br><span class="line"><span class="comment">// TODO(): 不确定该用哪个 context 时的占位符，表示“这里需要 context，但我暂时不确定该传什么”</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="4-context的传递机制"><a href="#4-context的传递机制" class="headerlink" title="4.context的传递机制"></a>4.context的传递机制</h2><h3 id="4-1-父子继承"><a href="#4-1-父子继承" class="headerlink" title="4.1 父子继承"></a>4.1 父子继承</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx1 := context.TODO()</span><br><span class="line">  ctx2 := context.Background() <span class="comment">// 只有语义上有差别 都是创建</span></span><br><span class="line">  ctx1 = context.WithValue(ctx1, <span class="string">&quot;name&quot;</span>, <span class="string">&quot;father&quot;</span>) <span class="comment">// 从空的ctx1继承 +[name]:[father]键值对</span></span><br><span class="line">  ctx1 = context.WithValue(ctx2, <span class="string">&quot;age&quot;</span>, <span class="number">18</span>)        <span class="comment">// 从空的ctx2加上[age]:18</span></span><br><span class="line">  fmt.Println(ctx1.Value(<span class="string">&quot;name&quot;</span>), ctx1.Value(<span class="string">&quot;age&quot;</span>))</span><br><span class="line">  fmt.Println(ctx2.Value(<span class="string">&quot;name&quot;</span>), ctx2.Value(<span class="string">&quot;age&quot;</span>))</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 所以我只能知道ctx1的age</span></span><br><span class="line"><span class="comment">// name在传递过程中消失</span></span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123130656969.png" class="" title="继承关系示意 1">
+
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx1 := context.TODO()</span><br><span class="line">  ctx2 := context.Background() <span class="comment">// 只有语义上有差别 都是创建</span></span><br><span class="line">  ctx1 = context.WithValue(ctx1, <span class="string">&quot;name&quot;</span>, <span class="string">&quot;father&quot;</span>) <span class="comment">// 从空的ctx1继承 +[name]:[father]键值对</span></span><br><span class="line">  ctx1 = context.WithValue(ctx1, <span class="string">&quot;age&quot;</span>, <span class="number">18</span>)        <span class="comment">// 从ctx1的[name]:[father]加上[age]:18</span></span><br><span class="line">  fmt.Println(ctx1.Value(<span class="string">&quot;name&quot;</span>), ctx1.Value(<span class="string">&quot;age&quot;</span>))</span><br><span class="line">  fmt.Println(ctx2.Value(<span class="string">&quot;name&quot;</span>), ctx2.Value(<span class="string">&quot;age&quot;</span>))</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 这时候name也被传递下来</span></span><br><span class="line"><span class="comment">// ctx2依旧是空的</span></span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123130830695.png" class="" title="继承关系示意 2">
+
+<h3 id="4-2-更加直观的父子继承"><a href="#4-2-更加直观的父子继承" class="headerlink" title="4.2 更加直观的父子继承"></a>4.2 更加直观的父子继承</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx1 := context.TODO()</span><br><span class="line">  ctx2 := context.Background()</span><br><span class="line">  ctx1 = context.WithValue(ctx1, <span class="string">&quot;name&quot;</span>, <span class="string">&quot;father&quot;</span>)</span><br><span class="line">  ctx2 = context.WithValue(ctx1, <span class="string">&quot;name&quot;</span>, <span class="string">&quot;son&quot;</span>)</span><br><span class="line"></span><br><span class="line">  fmt.Println(ctx1.Value(<span class="string">&quot;name&quot;</span>))</span><br><span class="line">  fmt.Println(ctx2.Value(<span class="string">&quot;name&quot;</span>))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123132104104.png" class="" title="继承关系示意 3">
+
+<h2 id="5-context的取消机制"><a href="#5-context的取消机制" class="headerlink" title="5.context的取消机制"></a>5.context的取消机制</h2><p><code>context.WithCancel</code> 函数能够从 <code>context.Context</code> 中衍生出一个新的子上下文并返回用于取消该上下文的函数。</p>
+<p>一旦我们执行返回的取消函数，当前上下文以及它的子上下文都会被取消，所有的 Goroutine 都会同步收到这一取消信号。</p>
+<p>先来个简单的 demo 展示：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">work</span><span class="params">(ctx context.Context)</span></span> &#123;</span><br><span class="line">  <span class="keyword">for</span> &#123;</span><br><span class="line">    <span class="keyword">select</span> &#123;</span><br><span class="line">    <span class="keyword">case</span> &lt;-ctx.Done():</span><br><span class="line">      fmt.Println(<span class="string">&quot;ctx done&quot;</span>)</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">      fmt.Println(<span class="string">&quot;working&quot;</span>)</span><br><span class="line">      time.Sleep(<span class="number">1</span> * time.Second)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx, cancel := context.WithCancel(context.Background())</span><br><span class="line">  <span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">    time.Sleep(<span class="number">5</span> * time.Second)</span><br><span class="line">    cancel()</span><br><span class="line">  &#125;()</span><br><span class="line"></span><br><span class="line">  work(ctx)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123144959879.png" class="" title="WithCancel 输出示意">
+
+<p>五秒 working 之后 done 符合预期。</p>
+<p>值得注意的是为什么调用取消之后 <code>ctx.Done()</code> 就会产生返回值呢，这跟 golang 的 channel 特性有关：当从一个关闭的 channel 读取时会读取“零值”，所以能够读取到数据。</p>
+<h2 id="6-context的截止时间机制"><a href="#6-context的截止时间机制" class="headerlink" title="6.context的截止时间机制"></a>6.context的截止时间机制</h2><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(<span class="number">5</span>*time.Second))</span><br><span class="line">  <span class="keyword">defer</span> cancel()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">select</span> &#123;</span><br><span class="line">  <span class="keyword">case</span> &lt;-time.After(<span class="number">8</span> * time.Second):</span><br><span class="line">    fmt.Println(<span class="string">&quot;任务执行完成&quot;</span>)</span><br><span class="line">  <span class="keyword">case</span> &lt;-ctx.Done():</span><br><span class="line">    fmt.Println(<span class="string">&quot;任务被取消:&quot;</span>, ctx.Err())</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123154838071.png" class="" title="WithDeadline 输出示意">
+
+<p><strong>Deadline</strong> 更适合 <strong>整个工作流程</strong> 的截止时间（如批处理任务必须在午夜前完成、必须在事务开始 30 多秒之后提交）。</p>
+<h2 id="7-context的超时机制以及继承关系"><a href="#7-context的超时机制以及继承关系" class="headerlink" title="7.context的超时机制以及继承关系"></a>7.context的超时机制以及继承关系</h2><p>当一个 Context 设置超时后，它会创建 <strong>一个新的 Context 节点</strong> 在上下文树中，超时时间会 <strong>向下传播给所有子上下文</strong>。</p>
+<h3 id="规则1：子上下文不能延长父上下文的超时"><a href="#规则1：子上下文不能延长父上下文的超时" class="headerlink" title="规则1：子上下文不能延长父上下文的超时"></a>规则1：子上下文不能延长父上下文的超时</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  <span class="comment">// 根上下文，没有超时</span></span><br><span class="line">  rootCtx := context.Background()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 创建 5 秒超时的父上下文</span></span><br><span class="line">  parentCtx, parentCancel := context.WithTimeout(rootCtx, <span class="number">5</span>*time.Second)</span><br><span class="line">  <span class="keyword">defer</span> parentCancel()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 创建子上下文（继承父的超时）</span></span><br><span class="line">  childCtx, childCancel := context.WithTimeout(parentCtx, <span class="number">10</span>*time.Second)</span><br><span class="line">  <span class="keyword">defer</span> childCancel()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 检查超时时间</span></span><br><span class="line">  checkDeadline(parentCtx, <span class="string">&quot;parent&quot;</span>)</span><br><span class="line">  checkDeadline(childCtx, <span class="string">&quot;child&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">checkDeadline</span><span class="params">(ctx context.Context, name <span class="type">string</span>)</span></span> &#123;</span><br><span class="line">  deadline, ok := ctx.Deadline()</span><br><span class="line">  <span class="keyword">if</span> ok &#123;</span><br><span class="line">    remaining := time.Until(deadline)</span><br><span class="line">    fmt.Printf(<span class="string">&quot;%s: 截止时间 %v, 剩余 %v\n&quot;</span>,</span><br><span class="line">      name, deadline.Format(<span class="string">&quot;15:04:05&quot;</span>), remaining)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123161207980.png" class="" title="超时继承规则 1">
+
+<h3 id="规则2：子上下文可以设置更短的超时"><a href="#规则2：子上下文可以设置更短的超时" class="headerlink" title="规则2：子上下文可以设置更短的超时"></a>规则2：子上下文可以设置更短的超时</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  <span class="comment">// 根上下文，没有超时</span></span><br><span class="line">  rootCtx := context.Background()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 创建 5 秒超时的父上下文</span></span><br><span class="line">  parentCtx, parentCancel := context.WithTimeout(rootCtx, <span class="number">5</span>*time.Second)</span><br><span class="line">  <span class="keyword">defer</span> parentCancel()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 创建子上下文（继承父的超时）</span></span><br><span class="line">  childCtx, childCancel := context.WithTimeout(parentCtx, <span class="number">2</span>*time.Second)</span><br><span class="line">  <span class="keyword">defer</span> childCancel()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 检查超时时间</span></span><br><span class="line">  checkDeadline(parentCtx, <span class="string">&quot;parent&quot;</span>)</span><br><span class="line">  checkDeadline(childCtx, <span class="string">&quot;child&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">checkDeadline</span><span class="params">(ctx context.Context, name <span class="type">string</span>)</span></span> &#123;</span><br><span class="line">  deadline, ok := ctx.Deadline()</span><br><span class="line">  <span class="keyword">if</span> ok &#123;</span><br><span class="line">    remaining := time.Until(deadline)</span><br><span class="line">    fmt.Printf(<span class="string">&quot;%s: 截止时间 %v, 剩余 %v\n&quot;</span>,</span><br><span class="line">      name, deadline.Format(<span class="string">&quot;15:04:05&quot;</span>), remaining)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/01/23/go-context/image-20260123161317735.png" class="" title="超时继承规则 2">
+
+<p>当我们在 http 请求链当中就可以设置分层严格的请求时间。</p>
+]]></content>
+      <categories>
+        <category>Go</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
+        <tag>标准库</tag>
+        <tag>context</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Go 语言中的 defer：常见用法与避坑指南</title>
+    <url>/2026/10/20/go-defer/</url>
+    <content><![CDATA[<p>写 Go 的人几乎每天都在用 <code>defer</code>：打开文件要 <code>Close</code>，加了锁要 <code>Unlock</code>，拿到 HTTP 响应要 <code>Body.Close()</code>。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 <code>return</code> 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。</p>
+<p>本文先把 <code>defer</code> 的三条核心规则讲清楚，再过一遍高频用法，最后按「坑」逐条排查，每一条都配上可直接运行的最小示例。</p>
+<span id="more"></span>
+
+<h2 id="1-defer-是什么"><a href="#1-defer-是什么" class="headerlink" title="1. defer 是什么"></a>1. defer 是什么</h2><p><code>defer</code> 语句把一个函数调用推迟到<strong>当前函数返回之前</strong>执行。看一个最小示例：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	f, err := os.Open(<span class="string">&quot;demo.txt&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Println(<span class="string">&quot;打开失败:&quot;</span>, err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 注册：main 返回前自动执行 f.Close()</span></span><br><span class="line">	<span class="keyword">defer</span> f.Close()</span><br><span class="line"></span><br><span class="line">	fmt.Println(<span class="string">&quot;正常处理文件...&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>三点说明：</p>
+<ul>
+<li><code>defer</code> 只能写在函数体内部，写在包级别直接编译不过</li>
+<li>即使函数中途 <code>panic</code>，已经注册的 <code>defer</code> 依然会执行——这是 <code>recover</code> 能工作的前提</li>
+<li>一个函数里可以注册多个 <code>defer</code></li>
+</ul>
+<h2 id="2-三条核心规则"><a href="#2-三条核心规则" class="headerlink" title="2. 三条核心规则"></a>2. 三条核心规则</h2><h3 id="规则一：多个-defer，后进先出（LIFO）"><a href="#规则一：多个-defer，后进先出（LIFO）" class="headerlink" title="规则一：多个 defer，后进先出（LIFO）"></a>规则一：多个 defer，后进先出（LIFO）</h3><p><code>defer</code> 的执行顺序像栈：<strong>最后注册的最先执行</strong>。</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;1 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;2 号 defer&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;3 号 defer&quot;</span>)</span><br><span class="line">	fmt.Println(<span class="string">&quot;函数体跑完了，准备返回&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>输出：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">函数体跑完了，准备返回</span><br><span class="line">3 号 defer</span><br><span class="line">2 号 defer</span><br><span class="line">1 号 defer</span><br></pre></td></tr></table></figure></div>
+
+<p>所以注册顺序要和释放顺序相反：先打开 A 再打开 B，就应该先写 <code>defer A.Close()</code>，再写 <code>defer B.Close()</code>——B 先关、A 后关，与获取顺序正好相反，符合依赖关系。</p>
+<h3 id="规则二：参数在-defer-语句执行的那一刻就求值"><a href="#规则二：参数在-defer-语句执行的那一刻就求值" class="headerlink" title="规则二：参数在 defer 语句执行的那一刻就求值"></a>规则二：参数在 defer 语句执行的那一刻就求值</h3><p>真实的调用被推迟了，但<strong>函数和参数的值在写 <code>defer</code> 那一行时就被计算并保存下来</strong>。</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;defer 保存的快照 i =&quot;</span>, i) <span class="comment">// 此刻 i 是 0，快照就是 0</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">	fmt.Println(<span class="string">&quot;返回前的 i =&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>输出：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">返回前的 i = 100</span><br><span class="line">defer 保存的快照 i = 0</span><br></pre></td></tr></table></figure></div>
+
+<p>如果想让延迟函数看到「最新值」，套一层闭包：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	i := <span class="number">0</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; fmt.Println(<span class="string">&quot;闭包看到的 i =&quot;</span>, i) &#125;() <span class="comment">// 执行时才取 i</span></span><br><span class="line">	i = <span class="number">100</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>输出 <code>闭包看到的 i = 100</code>。</p>
+<p>一句话记住：<strong>参数是拍快照，闭包引用是看直播。</strong> 方法调用同理，值接收者在 <code>defer</code> 语句处就会被求值并拷贝一份。</p>
+<h3 id="规则三：在「函数返回前」执行，而不是「作用域结束时」"><a href="#规则三：在「函数返回前」执行，而不是「作用域结束时」" class="headerlink" title="规则三：在「函数返回前」执行，而不是「作用域结束时」"></a>规则三：在「函数返回前」执行，而不是「作用域结束时」</h3><p>这一点和 C++ 的 RAII、Swift 的 <code>defer</code> 都不同：<code>for</code> 循环一次迭代结束并不会触发 <code>defer</code>，它必须等到<strong>整个函数</strong>返回。这是后面「坑 1」的根源，先记住这条规则。</p>
+<h2 id="3-return-的三步走：defer-和返回值谁先谁后"><a href="#3-return-的三步走：defer-和返回值谁先谁后" class="headerlink" title="3. return 的三步走：defer 和返回值谁先谁后"></a>3. return 的三步走：defer 和返回值谁先谁后</h2><p>带 <code>defer</code> 的函数里，一条 <code>return</code> 语句实际分三步执行：</p>
+<ol>
+<li>给返回值赋值</li>
+<li>执行所有 <code>defer</code></li>
+<li>真正返回</li>
+</ol>
+<p>对比两个经典例子：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">()</span></span> (result <span class="type">int</span>) &#123; <span class="comment">// 命名返回值</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; result++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> <span class="number">5</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">g</span><span class="params">()</span></span> <span class="type">int</span> &#123; <span class="comment">// 匿名返回值</span></span><br><span class="line">	x := <span class="number">5</span></span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; x++ &#125;()</span><br><span class="line">	<span class="keyword">return</span> x</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>f()</code> 返回 <strong>6</strong>：<code>return 5</code> 先把 <code>result</code> 赋成 5，然后 defer 把它加一，最后返回</li>
+<li><code>g()</code> 返回 <strong>5</strong>：<code>return x</code> 已经把匿名返回值定成 5，defer 改的是局部变量 <code>x</code>，影响不到返回值</li>
+</ul>
+<p>所以：想用 defer 改写返回值（统一给 error 补上下文、失败时清理半成品），必须使用命名返回值。一个实用片段：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">loadConfig</span><span class="params">(path <span class="type">string</span>)</span></span> (cfg Config, err <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			err = fmt.Errorf(<span class="string">&quot;load config %s: %w&quot;</span>, path, err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="keyword">return</span> cfg, readAll(path)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="4-常见用法"><a href="#4-常见用法" class="headerlink" title="4. 常见用法"></a>4. 常见用法</h2><h3 id="4-1-释放资源：紧跟在获取动作后面写"><a href="#4-1-释放资源：紧跟在获取动作后面写" class="headerlink" title="4.1 释放资源：紧跟在获取动作后面写"></a>4.1 释放资源：紧跟在获取动作后面写</h3><p>这是 <code>defer</code> 的头号用途。标准模板永远是「获取 → 判 err → defer 释放」：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">defer</span> f.Close()</span><br></pre></td></tr></table></figure></div>
+
+<p>同一招适用于 <code>mu.Unlock()</code>、<code>resp.Body.Close()</code>、<code>rows.Close()</code>。</p>
+<h3 id="4-2-计时与打点"><a href="#4-2-计时与打点" class="headerlink" title="4.2 计时与打点"></a>4.2 计时与打点</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">handle</span><span class="params">()</span></span> &#123;</span><br><span class="line">	start := time.Now()</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;handle 耗时 %s&quot;</span>, time.Since(start))</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// 业务逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>好处是入口处一次注册，任何分支提前 return 都能记到耗时。</p>
+<h3 id="4-3-临时改动全局状态，用完恢复"><a href="#4-3-临时改动全局状态，用完恢复" class="headerlink" title="4.3 临时改动全局状态，用完恢复"></a>4.3 临时改动全局状态，用完恢复</h3><p>测试里最常见：临时替换全局配置，测试结束恢复原样：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> config = <span class="keyword">struct</span> &#123;</span><br><span class="line">	Timeout time.Duration</span><br><span class="line">&#125;&#123;Timeout: <span class="number">30</span> * time.Second&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestPing</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	old := config.Timeout</span><br><span class="line">	config.Timeout = time.Second</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; config.Timeout = old &#125;() <span class="comment">// 保证恢复</span></span><br><span class="line">	<span class="comment">// 测试逻辑...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-4-配合-recover-兜底-panic"><a href="#4-4-配合-recover-兜底-panic" class="headerlink" title="4.4 配合 recover 兜底 panic"></a>4.4 配合 recover 兜底 panic</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;捕获 panic: %v&quot;</span>, r)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure></div>
+
+<p>注意 <code>recover</code> 必须放在 <code>defer</code> 直接调用的函数里才生效，也只能捕获同一个 goroutine 的 panic。这部分展开内容较多，之前单独写过一篇，细节见<a href="/2026/01/27/go-recover/">《Go 里的 recover：如何优雅地兜底 panic》</a>。</p>
+<h2 id="5-避坑指南"><a href="#5-避坑指南" class="headerlink" title="5. 避坑指南"></a>5. 避坑指南</h2><h3 id="坑-1：循环里-defer，资源全堆到函数结束才释放"><a href="#坑-1：循环里-defer，资源全堆到函数结束才释放" class="headerlink" title="坑 1：循环里 defer，资源全堆到函数结束才释放"></a>坑 1：循环里 defer，资源全堆到函数结束才释放</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">process</span><span class="params">(files []<span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	<span class="keyword">for</span> _, name := <span class="keyword">range</span> files &#123;</span><br><span class="line">		f, err := os.Open(name)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">defer</span> f.Close() <span class="comment">// 坏！要等 process 返回才统一关闭</span></span><br><span class="line">		<span class="keyword">if</span> err := handle(f); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>10 万个文件意味着同时打开 10 万个句柄，很容易撞上 <code>too many open files</code>。正确做法是把「单个文件」的处理抽成函数，让 <code>defer</code> 在每次处理结束时立刻生效：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">processOne</span><span class="params">(name <span class="type">string</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">	f, err := os.Open(name)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> f.Close() <span class="comment">// processOne 一返回就关闭</span></span><br><span class="line">	<span class="keyword">return</span> handle(f)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="坑-2：err-还没判断，就先-defer-f-Close"><a href="#坑-2：err-还没判断，就先-defer-f-Close" class="headerlink" title="坑 2：err 还没判断，就先 defer f.Close()"></a>坑 2：err 还没判断，就先 defer f.Close()</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line">f, err := os.Open(path)</span><br><span class="line"><span class="keyword">defer</span> f.Close() <span class="comment">// 坏！</span></span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> err <span class="comment">// f 是 nil，返回前 nil.Close() 直接 panic</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>打开失败时 <code>f</code> 是 <code>nil</code>，<code>defer</code> 注册的 <code>nil.Close()</code> 会在 return 时触发，把一个普通错误放大成 panic。修复方式就是 4.1 的模板：先判 <code>err</code>，再写 <code>defer</code>。</p>
+<h3 id="坑-3：defer-mu-Lock-——锁根本没加上"><a href="#坑-3：defer-mu-Lock-——锁根本没加上" class="headerlink" title="坑 3：defer mu.Lock()——锁根本没加上"></a>坑 3：defer mu.Lock()——锁根本没加上</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">bad</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	<span class="keyword">defer</span> mu.Lock() <span class="comment">// 坏！锁要到函数返回时才加，临界区完全没被保护</span></span><br><span class="line">	<span class="comment">// ... 这里其实是「无锁」执行的</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>defer</code> 延迟的是 <code>Lock</code> 这个调用本身，于是整个函数体都在没锁的状态下跑，返回时才加锁，而且再也不会 <code>Unlock</code>。正确姿势：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">good</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> mu sync.Mutex</span><br><span class="line">	mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> mu.Unlock()</span><br><span class="line">	<span class="comment">// ... 临界区</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>顺带一个变体：写了 <code>defer mu.Unlock()</code> 之后又在函数中途手动 <code>mu.Unlock()</code>，返回时 defer 再解锁一次，直接 <code>panic: sync: unlock of unlocked mutex</code>。同一个锁要么全程交给 defer 管，要么自己管，别混着来。</p>
+<h3 id="坑-4：以为拿到的是最新值，其实是快照"><a href="#坑-4：以为拿到的是最新值，其实是快照" class="headerlink" title="坑 4：以为拿到的是最新值，其实是快照"></a>坑 4：以为拿到的是最新值，其实是快照</h3><p>规则二在循环里的样子：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> i := <span class="number">1</span>; i &lt;= <span class="number">3</span>; i++ &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;快照:&quot;</span>, i)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>每个 <code>defer</code> 保存的都是当轮 <code>i</code> 的快照（1、2、3），最后按 LIFO 输出 <code>3 2 1</code>。注意：即使 Go 1.22 之后循环变量每轮迭代都是新变量，这条也<strong>不变</strong>——那改变的是闭包捕获语义，defer 参数的求值时机始终是 defer 语句执行的那一刻。想拿到「函数退出那一刻的值」，套一层闭包即可。</p>
+<h3 id="坑-5：os-Exit-log-Fatal-会跳过所有-defer"><a href="#坑-5：os-Exit-log-Fatal-会跳过所有-defer" class="headerlink" title="坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer"></a>坑 5：os.Exit &#x2F; log.Fatal 会跳过所有 defer</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;清理资源&quot;</span>) <span class="comment">// 永远不会执行</span></span><br><span class="line">	<span class="keyword">if</span> failed &#123;</span><br><span class="line">		os.Exit(<span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>os.Exit</code> 直接终止进程，不执行任何 defer；<code>log.Fatal</code> 内部就是 <code>os.Exit(1)</code>，同样跳过。外部 <code>kill -9</code>、断电就更不用说了。所以 main 里必须在退出前完成的清理（flush 缓冲、删临时文件），要在 <code>os.Exit</code> 之前显式调用，别指望 defer。</p>
+<h3 id="坑-6：defer-只属于注册它的那个-goroutine"><a href="#坑-6：defer-只属于注册它的那个-goroutine" class="headerlink" title="坑 6：defer 只属于注册它的那个 goroutine"></a>坑 6：defer 只属于注册它的那个 goroutine</h3><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">defer</span> fmt.Println(<span class="string">&quot;子 goroutine 的 defer&quot;</span>)</span><br><span class="line">		<span class="comment">// ...</span></span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="comment">// main 很快返回，子 goroutine 连同它的 defer 一起被带走</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>main 返回（进程结束）时，其它 goroutine 会被直接终止，它们的 defer 没有机会执行；<code>recover</code> 也只能捕获同一个 goroutine 的 panic。跨 goroutine 的收尾要靠 <code>sync.WaitGroup</code>、<code>context</code> 取消这类机制来配合。</p>
+<h3 id="坑-7：为了性能不用-defer？大可不必"><a href="#坑-7：为了性能不用-defer？大可不必" class="headerlink" title="坑 7：为了性能不用 defer？大可不必"></a>坑 7：为了性能不用 defer？大可不必</h3><p>早期版本（Go 1.13 之前）defer 确实有额外开销，但 Go 1.14 引入 open-coded defer 之后，常见场景的开销已经接近一次普通函数调用。为了省这点开销在循环里手动 Close、漏掉异常路径，才是真正的 bug 来源。真正值得优化的还是坑 1 那种「defer 堆积导致资源延迟释放」，而不是 defer 本身。</p>
+<h2 id="6-小结：一份-defer-检查清单"><a href="#6-小结：一份-defer-检查清单" class="headerlink" title="6. 小结：一份 defer 检查清单"></a>6. 小结：一份 defer 检查清单</h2><p>发布前过一遍：</p>
+<ul>
+<li>获取资源后<strong>下一行</strong>就写 defer，并且先判断 err（坑 2）</li>
+<li>循环里获取的资源，抽成独立函数再 defer（坑 1）</li>
+<li>延迟函数想看到最新值，用闭包（规则二、坑 4）</li>
+<li>锁的正确姿势是先 Lock 再 defer Unlock，永远不要 defer Lock（坑 3）</li>
+<li>想让 defer 改写返回值，必须用命名返回值（第 3 节）</li>
+<li>os.Exit &#x2F; log.Fatal 之前，重要清理要显式执行（坑 5）</li>
+<li>recover 只能放在 defer 直接调用的函数里（用法 4.4）</li>
+</ul>
+<p>把三条规则记牢——LIFO、参数拍快照、函数返回前才执行——上面所有的坑都能自己推导出来。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li>The Go Blog：<a class="link"   href="https://go.dev/blog/defer-panic-and-recover" >Defer, Panic, and Recover<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li>Go 语言规范：<a class="link"   href="https://go.dev/ref/spec#Defer_statements" >Defer statements<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li>Effective Go：<a class="link"   href="https://go.dev/doc/effective_go#defer" >defer<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li>本站：<a href="/2026/01/27/go-recover/">《Go 里的 recover：如何优雅地兜底 panic》</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Go</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
+        <tag>defer</tag>
+        <tag>避坑</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Go 里的 recover：如何优雅地兜底 panic（写给初学者）</title>
+    <url>/2026/01/27/go-recover/</url>
+    <content><![CDATA[<p>很多 Go 初学者第一次遇到 <code>panic</code> 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：<strong>用 <code>recover</code> 可以救回来</strong>。</p>
+<p>但 <code>recover</code> 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 <code>panic / defer / recover</code> 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。</p>
+<span id="more"></span>
+
+<h2 id="1-panic-defer-recover-到底是什么关系？"><a href="#1-panic-defer-recover-到底是什么关系？" class="headerlink" title="1. panic &#x2F; defer &#x2F; recover 到底是什么关系？"></a>1. panic &#x2F; defer &#x2F; recover 到底是什么关系？</h2><ul>
+<li><p><strong>panic</strong></p>
+<ul>
+<li>让当前 goroutine 进入异常流程：从当前函数开始向上“展开调用栈”（stack unwinding）</li>
+<li>在展开过程中，会执行每一层函数里注册的 <code>defer</code></li>
+</ul>
+</li>
+<li><p><strong>defer</strong></p>
+<ul>
+<li>延迟执行：函数返回前执行</li>
+<li>发生 <code>panic</code> 时也会执行（这是 <code>recover</code> 能工作的原因）</li>
+</ul>
+</li>
+<li><p><strong>recover</strong></p>
+<ul>
+<li>作用：在 <code>panic</code> 发生后，把 <code>panic</code> 的值取出来，并<strong>阻止程序继续崩溃</strong></li>
+<li><strong>只能在 <code>defer</code> 调用的函数里生效</strong>，否则返回 <code>nil</code></li>
+</ul>
+</li>
+</ul>
+<p>一句话总结：<br><strong>panic 触发异常 -&gt; defer 仍会执行 -&gt; defer 里调用 recover 才能捕获并兜底。</strong></p>
+<h2 id="2-最小可运行示例：recover-正确写法"><a href="#2-最小可运行示例：recover-正确写法" class="headerlink" title="2. 最小可运行示例：recover 正确写法"></a>2. 最小可运行示例：recover 正确写法</h2><div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">&quot;fmt&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;捕获到 panic:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	fmt.Println(<span class="string">&quot;before panic&quot;</span>)</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;something bad happened&quot;</span>)</span><br><span class="line">	fmt.Println(<span class="string">&quot;after panic (不会执行)&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>运行输出类似：</p>
+<ul>
+<li><code>before panic</code></li>
+<li><code>捕获到 panic: something bad happened</code></li>
+</ul>
+<p>注意：<code>panic</code> 之后的那行 <code>after panic</code> 不会执行，因为控制流已经进入 panic 展开流程了。</p>
+<h2 id="3-常见误区-1：不在-defer-里调用-recover-——-永远抓不到"><a href="#3-常见误区-1：不在-defer-里调用-recover-——-永远抓不到" class="headerlink" title="3. 常见误区 1：不在 defer 里调用 recover —— 永远抓不到"></a>3. 常见误区 1：不在 defer 里调用 recover —— 永远抓不到</h2><p>很多人会写成这样：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="built_in">recover</span>() <span class="comment">// 没用</span></span><br><span class="line"><span class="built_in">panic</span>(<span class="string">&quot;x&quot;</span>)</span><br></pre></td></tr></table></figure></div>
+
+<p>或者这样：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">()</span></span> &#123;</span><br><span class="line">	r := <span class="built_in">recover</span>() <span class="comment">// 没用</span></span><br><span class="line">	fmt.Println(r)</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;x&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>原因：<code>recover</code> 必须在 panic 展开过程中被调用，而展开过程只会执行 <code>defer</code>，所以必须写在 <code>defer func(){...}()</code> 里。</p>
+<h2 id="4-常见误区-2：recover-只能抓“同一个-goroutine”的-panic"><a href="#4-常见误区-2：recover-只能抓“同一个-goroutine”的-panic" class="headerlink" title="4. 常见误区 2：recover 只能抓“同一个 goroutine”的 panic"></a>4. 常见误区 2：recover 只能抓“同一个 goroutine”的 panic</h2><p>下面这种情况非常常见：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;main recover:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;panic in goroutine&quot;</span>)</span><br><span class="line">	&#125;()</span><br><span class="line"></span><br><span class="line">	time.Sleep(time.Second)</span><br><span class="line">	fmt.Println(<span class="string">&quot;main exit&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>main</code> 的 <code>recover</code> <strong>抓不到</strong>子 goroutine 的 panic。子 goroutine panic 会直接把整个进程打挂（如果没人兜底）。</p>
+<p>正确方式：<strong>在每个 goroutine 的入口处兜底</strong>：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">			fmt.Println(<span class="string">&quot;goroutine recover:&quot;</span>, r)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;panic in goroutine&quot;</span>)</span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="5-常见误区-3：recover-后不是“从-panic-那行继续往下跑”"><a href="#5-常见误区-3：recover-后不是“从-panic-那行继续往下跑”" class="headerlink" title="5. 常见误区 3：recover 后不是“从 panic 那行继续往下跑”"></a>5. 常见误区 3：recover 后不是“从 panic 那行继续往下跑”</h2><p><code>recover</code> 只是把 <code>panic</code> 截住，让程序不至于崩溃。</p>
+<p>但它并不会让函数回到 <code>panic()</code> 那一行继续执行；<code>panic</code> 所在函数会走“返回路径”，相当于提前结束了当前执行流。</p>
+<p>所以 <code>recover</code> 更像：</p>
+<ul>
+<li>兜底 + 收尾 + 记录 + 返回默认值&#x2F;错误</li>
+</ul>
+<p>而不是：</p>
+<ul>
+<li>异常发生了，但当作没发生一样继续跑</li>
+</ul>
+<h2 id="6-recover-到底该怎么用才合理？"><a href="#6-recover-到底该怎么用才合理？" class="headerlink" title="6. recover 到底该怎么用才合理？"></a>6. recover 到底该怎么用才合理？</h2><h3 id="6-1-建议只在“边界层”兜底（框架-入口）"><a href="#6-1-建议只在“边界层”兜底（框架-入口）" class="headerlink" title="6.1 建议只在“边界层”兜底（框架&#x2F;入口）"></a>6.1 建议只在“边界层”兜底（框架&#x2F;入口）</h3><p>比如：</p>
+<ul>
+<li>HTTP handler 的最外层</li>
+<li>消费队列&#x2F;定时任务 worker 的最外层</li>
+<li>goroutine 的入口函数</li>
+</ul>
+<p>原因：</p>
+<ul>
+<li><code>panic</code> 往往代表程序员错误或不变式被破坏</li>
+<li>在业务逻辑里用 recover 把 panic 吞掉，会隐藏问题，导致“悄悄错了但没报警”</li>
+</ul>
+<h3 id="6-2-兜底时应该做什么？"><a href="#6-2-兜底时应该做什么？" class="headerlink" title="6.2 兜底时应该做什么？"></a>6.2 兜底时应该做什么？</h3><p>至少做三件事：</p>
+<ul>
+<li>记录 panic 的值</li>
+<li>记录堆栈（非常重要）</li>
+<li>让调用方得到合理响应（返回错误&#x2F;默认值&#x2F;500）</li>
+</ul>
+<p>下面是一个通用的 recover 包装函数（示例）：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;runtime/debug&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">safeGo</span><span class="params">(fn <span class="keyword">func</span>()</span></span>) &#123;</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">			<span class="keyword">if</span> r := <span class="built_in">recover</span>(); r != <span class="literal">nil</span> &#123;</span><br><span class="line">				fmt.Printf(<span class="string">&quot;panic: %v\nstack:\n%s\n&quot;</span>, r, debug.Stack())</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;()</span><br><span class="line">		fn()</span><br><span class="line">	&#125;()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	safeGo(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;boom&quot;</span>)</span><br><span class="line">	&#125;)</span><br><span class="line">	<span class="keyword">select</span> &#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="7-panic-和-error-怎么选？（给初学者的简单规则）"><a href="#7-panic-和-error-怎么选？（给初学者的简单规则）" class="headerlink" title="7. panic 和 error 怎么选？（给初学者的简单规则）"></a>7. panic 和 error 怎么选？（给初学者的简单规则）</h2><ul>
+<li>用 <code>error</code>：可预期的失败（参数不合法、网络超时、文件不存在、权限不足）</li>
+<li>用 <code>panic</code>：不可恢复的程序错误&#x2F;不变式破坏（数组越界、空指针、并发写 map、逻辑必然不该发生）</li>
+<li>用 <code>recover</code>：只在边界层兜底，避免单个请求&#x2F;任务把整个进程打挂，同时保留日志和堆栈，便于修 bug</li>
+</ul>
+<h2 id="8-小结"><a href="#8-小结" class="headerlink" title="8. 小结"></a>8. 小结</h2><ul>
+<li><code>recover</code> 必须在 <code>defer</code> 里才有效</li>
+<li><code>recover</code> 只能捕获同一 goroutine 的 panic</li>
+<li>recover 的正确价值：兜底、防崩溃、打日志、保留堆栈、让系统可用</li>
+<li>日常业务错误处理：优先 <code>error</code>，不要靠 <code>panic/recover</code> 当“异常机制”</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Go</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
+        <tag>defer</tag>
+        <tag>panic</tag>
+        <tag>recover</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</title>
+    <url>/2026/10/20/goframe-indexed-array-binding/</url>
+    <content><![CDATA[<p>同一个请求，PHP 侧筛选出 0 条，Go 侧返回 1 条。参数等于没传，而且接口不报错、日志无异常、返回 200。</p>
+<p>这是我最近把一个 PHP(Laravel 6) 系统迁到 Go(GoFrame v2.10.0) 时遇到的真实分叉。排查到最后，我的结论是：<strong>GoFrame 对带索引数组参数（<code>ids[0]=1&amp;ids[1]=2</code>）是「半吊子支持」——解析层认了，结构体绑定层把它无声丢弃。这比完全不支持更坑</strong>，因为你能在 <code>GetQueryMap()</code> 里亲眼看到数据，却怎么都绑不进结构体字段。</p>
+<p>这篇文章记录完整的三层排查、三形态实测数据和最终方案的取舍过程。</p>
+<span id="more"></span>
+
+<h2 id="1-联调分叉：计数-0-对-1"><a href="#1-联调分叉：计数-0-对-1" class="headerlink" title="1. 联调分叉：计数 0 对 1"></a>1. 联调分叉：计数 0 对 1</h2><p>先交代背景。PHP 的 query 解析器原生把 <code>a[0]=1&amp;a[1]=2</code> 解析成数组——这是历史包袱，也是事实标准。axios + qs 的默认配置 <code>arrayFormat: &#39;indices&#39;</code> 产出的正是这种形态，所以我们的存量前端流量全是它，线上跑了多年没出过问题。</p>
+<p>迁移到 Go 之后，两端联调对照实测，分叉出现了：同一个带筛选的请求，PHP 侧按预期筛出 0 条，Go 侧返回 1 条——那 1 条就是本该被 <code>use_type</code> 筛掉的脏数据。</p>
+<h2 id="2-三层排查：从「框架不支持」到「半吊子支持」"><a href="#2-三层排查：从「框架不支持」到「半吊子支持」" class="headerlink" title="2. 三层排查：从「框架不支持」到「半吊子支持」"></a>2. 三层排查：从「框架不支持」到「半吊子支持」</h2><h3 id="第一层：六个参数集体静默失效"><a href="#第一层：六个参数集体静默失效" class="headerlink" title="第一层：六个参数集体静默失效"></a>第一层：六个参数集体静默失效</h3><p>顺着分叉往下查，Go 侧 6 个数组筛选参数（<code>use_type</code>&#x2F;<code>usable</code>&#x2F;<code>is_active</code>&#x2F;<code>is_edit</code>&#x2F;<code>is_call_in</code>&#x2F;<code>llm_end_type</code>）全部失效。接口行为完全正常，只是结果没筛——静默失败，比 crash 难发现一个数量级。</p>
+<h3 id="第二层：读源码，我差点下错结论"><a href="#第二层：读源码，我差点下错结论" class="headerlink" title="第二层：读源码，我差点下错结论"></a>第二层：读源码，我差点下错结论</h3><p>第一反应是读 ghttp 源码。在 <code>ghttp_request_param.go:314</code> 的参数规范化逻辑里，只看到对以 <code>[]</code> 结尾键名（<code>use_type[]</code>）的处理分支，没有任何 <code>[0]</code> 带索引的分支。</p>
+<p>我当时的结论是「框架原生不支持」。<strong>这个结论是错的</strong>，但它看起来非常有说服力——源码就在那里，缺了那个分支。差一步就准备去写通用中间件了。</p>
+<h3 id="第三层：一个-echo-服务揭开真相"><a href="#第三层：一个-echo-服务揭开真相" class="headerlink" title="第三层：一个 echo 服务揭开真相"></a>第三层：一个 echo 服务揭开真相</h3><p>写了个最小 echo 服务打印 <code>r.GetQueryMap()</code>，真相出来了：框架<strong>解析了</strong>。返回的 map 里，键是 <code>use_type</code>，值是嵌套 map <code>{&quot;0&quot;:&quot;1&quot;,&quot;1&quot;:&quot;2&quot;}</code>。</p>
+<p>链路断在下一环：gconv 做结构体绑定时，无法把<strong>纯数字键的 map</strong> 转成 <code>[]int</code> 目标字段，转换静默失败——不报错，字段留空。</p>
+<p>这就是「半吊子支持」的全貌：解析层和绑定层各干各的，中间没人负责把数字键 map 摊平成 slice。如果你只看其中一层（无论哪层），都会得出「没问题」或「不支持」的片面结论。</p>
+<h2 id="3-三形态实测：数据钉死问题"><a href="#3-三形态实测：数据钉死问题" class="headerlink" title="3. 三形态实测：数据钉死问题"></a>3. 三形态实测：数据钉死问题</h2><p>最小复现结构：</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> Req <span class="keyword">struct</span> &#123;</span><br><span class="line">    g.Meta</span><br><span class="line">    Ids []<span class="type">int</span> <span class="string">`p:&quot;ids&quot;`</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>三种 query 形态实测对照：</p>
+<table>
+<thead>
+<tr>
+<th>Query 形态</th>
+<th><code>GetQueryMap()</code> 值</th>
+<th><code>[]int</code> 字段绑定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ids[]=1&amp;ids[]=2</code>（空索引）</td>
+<td><code>[1 2]</code></td>
+<td>✅ 成功</td>
+</tr>
+<tr>
+<td><code>ids=1&amp;ids=2</code>（重复键）</td>
+<td><code>[1 2]</code></td>
+<td>✅ 成功</td>
+</tr>
+<tr>
+<td><code>ids[0]=1&amp;ids[1]=2</code>（带索引）</td>
+<td><code>{&quot;0&quot;:1,&quot;1&quot;:2}</code> 嵌套 map</td>
+<td>❌ <strong>静默失败，字段为空</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>截至 2026-10（GoFrame v2.10.0）：<code>ids[0]=1&amp;ids[1]=2</code> 会被解析为 <code>map{&quot;0&quot;:&quot;1&quot;,&quot;1&quot;:&quot;2&quot;}</code>，绑定 <code>[]int</code> 字段时静默失败；<code>ids[]=</code> 与重复键两种形态正常。</p>
+</blockquote>
+<p>还有一条实测发现是解法的钥匙：<code>r.GetQuery(&quot;ids&quot;)</code> 对带索引形态返回的不是空值，而是 JSON 字符串 <code>{&quot;0&quot;:&quot;1&quot;,&quot;1&quot;:&quot;2&quot;}</code>——数据一直都在，只是形态变了。</p>
+<h2 id="4-谁会踩这个坑"><a href="#4-谁会踩这个坑" class="headerlink" title="4. 谁会踩这个坑"></a>4. 谁会踩这个坑</h2><p>判断影响面的标准很简单：<strong>你的 Go 服务前面，是不是 PHP 时代留下来的前端</strong>。</p>
+<ul>
+<li>是：必踩。axios + qs 默认就是 indices 格式，前端不改一行代码，数组筛选参数到 Go 侧就全部失效。</li>
+<li>否（新前端、Go 原生前端）：基本无感，用 <code>ids[]=</code> 或重复键都正常。</li>
+</ul>
+<p>我们的场景是分类列表接口 6 个筛选参数全灭。如果是分页列表这种用户会盯着看的页面，很快能发现；要是数据导出、报表类接口，脏数据可能悄无声息地流很久。</p>
+<h2 id="5-方案取舍：为什么是-controller-层-30-行"><a href="#5-方案取舍：为什么是-controller-层-30-行" class="headerlink" title="5. 方案取舍：为什么是 controller 层 30 行"></a>5. 方案取舍：为什么是 controller 层 30 行</h2><h3 id="采纳：controller-层手动补填"><a href="#采纳：controller-层手动补填" class="headerlink" title="采纳：controller 层手动补填"></a>采纳：controller 层手动补填</h3><p>思路一句话：<code>GetQuery(name)</code> 能拿到嵌套 map 的 JSON 串，把它反序列化、按数字键排序、转成 <code>[]int</code> 填回 req 字段。</p>
+<div class="code-container" data-rel="Go"><figure class="iseeu highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">fillIndexedArrayQuery</span><span class="params">(r *ghttp.Request, name <span class="type">string</span>, dest *[]<span class="type">int</span>)</span></span> &#123;</span><br><span class="line">    raw := r.GetQuery(name).String()</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(raw) &lt; <span class="number">2</span> || raw[<span class="number">0</span>] != <span class="string">&#x27;&#123;&#x27;</span> &#123; <span class="keyword">return</span> &#125; <span class="comment">// 非带索引形态，跳过</span></span><br><span class="line">    <span class="keyword">var</span> kv <span class="keyword">map</span>[<span class="type">string</span>]<span class="type">string</span></span><br><span class="line">    <span class="keyword">if</span> err := json.Unmarshal([]<span class="type">byte</span>(raw), &amp;kv); err != <span class="literal">nil</span> &#123; <span class="keyword">return</span> &#125;</span><br><span class="line">    keys := <span class="built_in">make</span>([]<span class="type">string</span>, <span class="number">0</span>, <span class="built_in">len</span>(kv))</span><br><span class="line">    <span class="keyword">for</span> k := <span class="keyword">range</span> kv &#123;</span><br><span class="line">        keys = <span class="built_in">append</span>(keys, k)</span><br><span class="line">    &#125;</span><br><span class="line">    sort.Strings(keys) <span class="comment">// 非负整数的字符串序即数值序</span></span><br><span class="line">    result := <span class="built_in">make</span>([]<span class="type">int</span>, <span class="number">0</span>, <span class="built_in">len</span>(keys))</span><br><span class="line">    <span class="keyword">for</span> _, k := <span class="keyword">range</span> keys &#123;</span><br><span class="line">        <span class="keyword">if</span> v, err := strconv.Atoi(kv[k]); err == <span class="literal">nil</span> &#123;</span><br><span class="line">            result = <span class="built_in">append</span>(result, v)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(result) &gt; <span class="number">0</span> &#123; *dest = result &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// controller 里：</span></span><br><span class="line">fillIndexedArrayQuery(r, <span class="string">&quot;use_type&quot;</span>, &amp;req.UseType)</span><br></pre></td></tr></table></figure></div>
+
+<p>选它的三个理由：</p>
+<ol>
+<li>logic&#x2F;service&#x2F;校验层零改动——req 补填完正常往下传</li>
+<li>框架原生的 <code>[]</code> 和重复键形态完全不受影响</li>
+<li>影响面精确到参数级，出问题好定位</li>
+</ol>
+<h3 id="否决的四个方案"><a href="#否决的四个方案" class="headerlink" title="否决的四个方案"></a>否决的四个方案</h3><p><strong>中间件重写 RawQuery</strong>（把 <code>name[N]=</code> 重写成 <code>name[]=</code>）：实际试过，<code>RawQuery</code> 是 URL 编码形态（<code>%5B0%5D</code>），正则匹配解码形态根本不生效——这类 bug 极隐蔽。而且通配所有参数属于过度设计，为一个已知形态改全局入口不划算。</p>
+<p><strong>前端改 qs <code>arrayFormat: &#39;brackets&#39;</code></strong>：治本——<code>ids[]=1</code> 两端原生支持。但要前端发版，存量流量无法保证同步切换，过渡期照样丢参数。适合作为长期演进，不能当止血方案。</p>
+<p><strong>适配器层重写</strong>：迁移期的临时设施，终态（前端全量切格式后）就是死代码。</p>
+<p><strong>controller 逐参数 <code>GetQuery(&quot;ids[0]&quot;)</code></strong>：参数一多就是复制粘贴地狱，不可维护。</p>
+<h2 id="6-官方文档写了前半句"><a href="#6-官方文档写了前半句" class="headerlink" title="6. 官方文档写了前半句"></a>6. 官方文档写了前半句</h2><p>事后查证：<a class="link"   href="https://goframe.org/en/docs/web/request-parameters" >Request - Parameters 文档<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>其实明确警告过「带索引数字的括号参数会被转换成 map」，示例正是 <code>array[0]=john&amp;array[1]=smith</code> → <code>map{&quot;0&quot;:&quot;john&quot;,&quot;1&quot;:&quot;smith&quot;}</code>。</p>
+<p>但文档只写了前半句。<strong>没写的是：这个 map 会静默绑不进 slice 字段</strong>。迁移场景里，坑人的恰恰是后半句——你从文档能推断出「会变成 map」，却推不出「绑定会无声失败」。</p>
+<p>另外搜遍 gogf&#x2F;gf 的 issue（<code>query array binding</code>、<code>数组 参数</code>、<code>slice query param</code>、<code>GetQueryMap</code> 等关键词）和公开社区，没有相同问题的报告。最接近的 <a class="link"   href="https://github.com/gogf/gf/issues/4786" >#4786<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 是 UUID slice 传入 panic（报错型，不是静默失败）；<a class="link"   href="https://github.com/gogf/gf/pull/4752" >#4752<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 是重复键收集成 slice 的修复——这条恰好解释了实测表里重复键形态为什么能绑定成功。这看起来是个未报告的缺口，值得报给上游。</p>
+<h2 id="7-带走什么"><a href="#7-带走什么" class="headerlink" title="7. 带走什么"></a>7. 带走什么</h2><p>三个判断，按优先级：</p>
+<ol>
+<li><strong>静默失败要靠对照测试抓</strong>：迁移期给核心接口做新旧实现的结果对照（同请求、比返回），比读源码更快定位「参数没生效」这类问题。</li>
+<li><strong>看到「解析成功」别停</strong>：数据出现在 <code>GetQueryMap()</code> 里，不代表它能进结构体。GoFrame 这类多层框架，每层都可能各自为政。</li>
+<li><strong>止血方案选影响面最小的</strong>：controller 层 30 行补填，长期方案推前端切 <code>brackets</code> 格式——两条腿分开走。</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a class="link"   href="https://goframe.org/en/docs/web/request-parameters" >GoFrame 文档：Request - Parameters（数组&#x2F;复杂参数规则）<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li><a class="link"   href="https://goframe.org/docs/web/inputs" >GoFrame 文档：请求输入<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li><a class="link"   href="https://github.com/gogf/gf/blob/master/net/ghttp/ghttp_request_param.go" >gogf&#x2F;gf 源码：ghttp_request_param.go<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+<li><a class="link"   href="https://github.com/ljharb/qs" >qs 文档：arrayFormat<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Go</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
+        <tag>GoFrame</tag>
+        <tag>PHP</tag>
+        <tag>踩坑</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</title>
+    <url>/2026/05/25/llm-wiki-agent-knowledge-layer/</url>
+    <content><![CDATA[<p>原文链接：<a class="link"   href="https://www.cnblogs.com/jtuki/p/19861920" >用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></p>
+<p>这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。</p>
+<span id="more"></span>
+
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>我理解这篇文章的重点有三个：</p>
+<ol>
+<li>Agent 需要的不是一次性 RAG，而是长期可维护的知识层。</li>
+<li>检索不应该只靠向量，<code>grep + 向量 + 图谱扩展</code> 可以互相补失败模式。</li>
+<li>中文技术知识里，精确词、缩写、同义词和领域术语非常重要，不能盲目相信 embedding。</li>
+</ol>
+<p>传统 RAG 更像“问一次，临时找资料，再回答”。LLM Wiki 的思路更像“先把知识编译成一个持续增长的代码库”。每次新增资料，不只是存进去，而是要抽取概念、建立链接、更新索引，让后续检索和推理都能复用这部分沉淀。</p>
+<h2 id="LLM-Wiki-的关键变化"><a href="#LLM-Wiki-的关键变化" class="headerlink" title="LLM Wiki 的关键变化"></a>LLM Wiki 的关键变化</h2><p>Karpathy 的 LLM Wiki 有一个很有意思的比喻：</p>
+<ul>
+<li>Obsidian 类似 IDE。</li>
+<li>Wiki 类似代码库。</li>
+<li>LLM 类似程序员。</li>
+</ul>
+<p>这和普通 RAG 的区别很大。</p>
+<p>普通 RAG 通常关注“怎么把文档切片后召回”。LLM Wiki 更关注“怎么把读过的内容变成长期资产”。它希望知识不是一次性上下文，而是被持续维护的 Markdown 页面、双链关系和概念网络。</p>
+<p>这样做的好处是：</p>
+<ul>
+<li>知识不会每次都从零检索。</li>
+<li>不同来源的信息可以被合并到同一个概念页。</li>
+<li>概念之间的关系可以沉淀下来。</li>
+<li>冲突、重复、过时内容更容易被发现。</li>
+<li>Agent 可以基于一个稳定的知识结构继续工作。</li>
+</ul>
+<p>换句话说，RAG 是查询时检索，LLM Wiki 是摄入时整理。</p>
+<h2 id="三通道检索：grep、向量、图谱"><a href="#三通道检索：grep、向量、图谱" class="headerlink" title="三通道检索：grep、向量、图谱"></a>三通道检索：grep、向量、图谱</h2><p>文章里最值得看的工程点，是它没有押宝单一检索方案，而是组合了三种通道。</p>
+<p>第一种是 grep。</p>
+<p>grep 负责精确匹配。技术知识里有很多强关键词，比如协议名、框架名、类名、错误码、函数名、缩写。只要词命中，相关性往往很高。尤其在中文技术语境中，很多新词、专有名词、英文缩写和中文混写，对 embedding 并不总是友好。</p>
+<p>第二种是向量检索。</p>
+<p>向量负责语义召回。当用户问法和文档表述不一致时，向量可以补 grep 的短板。比如用户问“设备通信标准”，原文可能写的是某个协议名；用户问“知识长期记忆”，原文可能写的是 Wiki、图谱或 memory。</p>
+<p>第三种是图谱扩展。</p>
+<p>图谱负责关系补充。一个页面本身可能没有直接命中查询词，但它和命中的页面存在链接、标签或社区关系。这个时候，通过邻居节点扩展，就能找到“用户没直接搜到但实际应该看的内容”。</p>
+<p>这三个通道的分工很清楚：</p>
+<ul>
+<li>grep 提供精确性。</li>
+<li>向量提供语义弹性。</li>
+<li>图谱提供结构关系。</li>
+</ul>
+<h2 id="为什么不是只用向量数据库"><a href="#为什么不是只用向量数据库" class="headerlink" title="为什么不是只用向量数据库"></a>为什么不是只用向量数据库</h2><p>很多人一做知识库，第一反应就是上向量数据库。但这篇文章的价值在于提醒我们：向量检索不是银弹。</p>
+<p>向量检索的问题主要有几个：</p>
+<ul>
+<li>它可能召回语义相似但任务无关的内容。</li>
+<li>它对领域新词、缩写、专有名词不一定稳定。</li>
+<li>它很难解释为什么某个结果排在前面。</li>
+<li>它不天然理解 Wiki 页面之间的显式链接关系。</li>
+</ul>
+<p>如果用户查的是一个很明确的技术词，比如某个协议、某个 API、某个错误码，grep 往往更可信。因为它不是“语义上相似”，而是“文本里真的出现了这个词”。</p>
+<p>所以合理的做法不是 grep 和向量二选一，而是先判断问题类型，再融合多路结果。</p>
+<h2 id="RRF-融合的意义"><a href="#RRF-融合的意义" class="headerlink" title="RRF 融合的意义"></a>RRF 融合的意义</h2><p>文章中提到的 RRF，可以理解成一种“多路排名合并”方法。</p>
+<p>它不要求不同检索通道的分数完全可比，而是看各自排名。一个结果如果在多个通道里都排得靠前，就会获得更高综合排名。</p>
+<p>这种方法适合混合检索，因为 grep、向量、图谱本来就不是同一种分数体系：</p>
+<ul>
+<li>grep 的分数来自命中词和覆盖率。</li>
+<li>向量的分数来自相似度。</li>
+<li>图谱的依据来自链接、邻居、入度或社区。</li>
+</ul>
+<p>直接比较这些分数很困难，用排名融合会更稳。</p>
+<p>文章里 grep 权重大于向量，我觉得这个决策很符合中文技术知识库的特点：在有明确术语命中的情况下，精确匹配应该更可信；向量更适合作为补充召回，而不是压过精确命中。</p>
+<h2 id="对-Agent-系统的启发"><a href="#对-Agent-系统的启发" class="headerlink" title="对 Agent 系统的启发"></a>对 Agent 系统的启发</h2><p>这篇文章对我最大的启发是：Agent 的知识层应该像工程系统一样建设，而不是像资料仓库一样堆放。</p>
+<p>一个可用的 Agent 知识层至少要考虑：</p>
+<ul>
+<li>知识怎么进入系统。</li>
+<li>进入后是否被结构化。</li>
+<li>概念之间是否建立链接。</li>
+<li>检索是否能解释。</li>
+<li>检索结果能否通过图关系扩展。</li>
+<li>旧知识是否能被更新或淘汰。</li>
+<li>新资料是否能持续融入已有体系。</li>
+</ul>
+<p>如果只是把文档丢进向量库，短期可能能回答一些问题，但长期会遇到知识重复、语义漂移、上下文碎片化和维护困难。</p>
+<p>LLM Wiki 的价值在于，它把知识管理从“存储问题”变成了“持续编译问题”。资料进来之后，系统要像编译器一样，把它变成更清晰的概念、索引和依赖关系。</p>
+<h2 id="和我之前看的-Claude-Code-检索文章的关系"><a href="#和我之前看的-Claude-Code-检索文章的关系" class="headerlink" title="和我之前看的 Claude Code 检索文章的关系"></a>和我之前看的 Claude Code 检索文章的关系</h2><p>这篇文章和我之前看的 Claude Code &#x2F; grep 检索思路可以连起来看。</p>
+<p>Claude Code 的重点是：代码库天然结构化，所以动态 <code>grep/ripgrep + 文件读取</code> 很有效。</p>
+<p>这篇文章进一步说明：如果对象不是代码，而是企业知识、技术文档和长期经验，那么只靠 grep 又不够，需要再叠加向量和图谱。</p>
+<p>可以这样理解：</p>
+<ul>
+<li>代码库：文件名、函数名、错误信息天然强结构，grep 权重可以很高。</li>
+<li>普通知识库：自然语言表达更多，向量检索更重要。</li>
+<li>企业 Agent 知识层：既有技术术语，又有隐性关系，最好用混合检索。</li>
+</ul>
+<p>所以不是“RAG 死了”，也不是“grep 万能”，而是不同数据形态需要不同检索组合。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这篇文章真正有价值的地方，不是某个具体工具，而是一套工程判断：</p>
+<ul>
+<li>知识要结构化，不只是存起来。</li>
+<li>检索要混合，不要迷信单一方案。</li>
+<li>精确术语要尊重，不要全部交给 embedding。</li>
+<li>图关系要利用，因为很多重要知识藏在连接里。</li>
+<li>Agent 的长期能力来自持续维护的知识层。</li>
+</ul>
+<p>如果以后我要给自己的博客、阅读记录或项目经验做一个更智能的知识系统，这篇文章的方案很值得参考：先用 Markdown&#x2F;Wiki 形成稳定知识单元，再用 grep 保证精确检索，用向量补语义召回，用图谱补关联扩展。</p>
+<p>真正的目标不是“让 AI 搜到一段文本”，而是让 AI 拥有一个会持续变好的知识底座。</p>
+]]></content>
+      <categories>
+        <category>AI</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+        <tag>RAG</tag>
+        <tag>LLM Wiki</tag>
+        <tag>知识管理</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>智能体记忆的组成部分</title>
+    <url>/2026/11/13/agent-memory-components/</url>
+    <content><![CDATA[<style>
+/* ============ 智能体记忆 · 雾蓝纸（设计 pass 2026-11-13）=============
+   概念：原文头图的两个半圆与缺口 —— 回望与向前。
+   冷雾蓝纸面；中文 sans 为主声部，英文原文以 Georgia 衬线为第二声部；
+   小节分隔线中段留缺口（半圆之间的 gap）。阅读模式沿用主题的书本按钮。 */
+#article-container {
+  --am-ink: #1d2930;
+  --am-mist: #68787f;
+  --am-green: #2e7d66;
+  --am-coral: #c96a79;
+  --am-rule: rgba(29, 41, 48, 0.28);
+  --am-plate: rgba(29, 41, 48, 0.14);
+  color: var(--am-ink);
+  font-size: 1.02rem;
+}
+#article-container p { line-height: 1.95; }
+
+/* 小节标题：底部分隔线中段留缺口 */
+#article-container h1,
+#article-container h2,
+#article-container h3 {
+  background-image: linear-gradient(90deg, var(--am-rule) 0 44%, transparent 44% 56%, var(--am-rule) 56% 100%);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  padding-bottom: 0.55em;
+}
+
+/* 关键数据：绿墨 */
+#article-container strong { color: var(--am-green); }
+
+/* 图版：细框，研究图版感 */
+#article-container img {
+  border: 1px solid var(--am-plate);
+  border-radius: 8px;
+}
+
+/* 引文（克尔凯郭尔 / Claude 原话）：去底色，珊瑚细线 */
+#article-container blockquote {
+  background: none;
+  border-left: 2px solid rgba(201, 106, 121, 0.5);
+}
+
+/* —— 第二声部：英文原文（Georgia 衬线，雾蓝；hover 显影放大）—— */
+#article-container p.agent-memory-en {
+  color: var(--am-mist);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.9em;
+  line-height: 1.8;
+  margin-top: -0.4em;
+  margin-bottom: 2.1em;
+  transition: font-size 0.25s ease, color 0.25s ease;
+}
+#article-container p.agent-memory-en:hover {
+  color: var(--am-ink);
+  font-size: 1em;
+}
+#article-container p.agent-memory-en a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(201, 106, 121, 0.45);
+}
+#article-container .agent-memory-code { font-family: monospace; }
+#article-container .agent-memory-em { font-style: italic; }
+#article-container .agent-memory-note { color: var(--am-mist); font-size: 0.85em; }
+#article-container ::selection { background: rgba(46, 125, 102, 0.18); }
+.card-toc .toc-number { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #article-container p.agent-memory-en { transition: none; }
+}
+
+/* 站点暗色主题下的本文变量 */
+[data-theme='dark'] #article-container {
+  --am-ink: #c9d2d8;
+  --am-mist: #7e8f99;
+  --am-rule: rgba(217, 224, 228, 0.26);
+  --am-plate: rgba(217, 224, 228, 0.16);
+}
+
+/* —— 阅读模式通用层已提升至 custom.css（全站生效）——
+   本文件只保留本文专属：阅读模式下英文原文段与正文同声部 */
+body.read-mode #article-container p.agent-memory-en {
+  font-size: 1em;
+  line-height: 1.65;
+  color: rgba(25, 25, 23, 0.72);
+}
+[data-theme='dark'] body.read-mode #article-container {
+  --am-green: #63b394;
+}
+[data-theme='dark'] body.read-mode #article-container p.agent-memory-en {
+  color: rgba(216, 213, 204, 0.7);
+}
+
+/* —— 图注：13px sans，纯原文文本 —— */
+#article-container .am-figcap {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', sans-serif;
+  font-size: 0.82em;
+  color: var(--am-mist);
+  text-align: center;
+  margin: 0.9em auto 2.2em;
+  max-width: 90%;
+  line-height: 1.6;
+}
+</style>
+
+<img src="/2026/11/13/agent-memory-components/cover.webp" class="">
+
+<p>这是 Anthropic 2026 年 11 月发布的一篇研究文章，介绍智能体记忆的组成，以及离线整理记忆的「做梦」机制。文章通过数据库问答、宝可梦游戏和文档检索等评估，探讨记忆的创建、组织与纠错。</p>
+<p>原文：<a class="link"   href="https://www.anthropic.com/research/components-of-agent-memory" >The components of agent memory<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></p>
+<span id="more"></span>
+
+<h2 id="1-开篇：生命只能回望时被理解，却必须向前活"><a href="#1-开篇：生命只能回望时被理解，却必须向前活" class="headerlink" title="1. 开篇：生命只能回望时被理解，却必须向前活"></a>1. 开篇：生命只能回望时被理解，却必须向前活</h2><blockquote>
+<p>克尔凯郭尔（Søren Kierkegaard）曾写道：生命只能回望时被理解，却必须向前活。我们在为 AI 智能体设计记忆时，也遇到了同样的困境。</p>
+</blockquote>
+<p class="agent-memory-en" lang="en">Søren Kierkegaard wrote that life can only be understood <span class="agent-memory-em">backward</span>, but it must be lived <span class="agent-memory-em">forward</span>. We've encountered a similar bind when designing memory for AI agents.</p>
+
+<p>作为人类，我们在生活中时刻不停地编码记忆。<a class="link"   href="https://stanford.edu/~jlmcc/papers/McCMcNaughtonOReilly95.pdf" >海马体（hippocampus）<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>在其中扮演核心角色，它在当下捕捉经历，使记忆快速形成并立即可用。但只有<a class="link"   href="https://www.science.org/doi/10.1126/science.adk8261" >一部分经历<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>会被巩固为长期知识。</p>
+<p class="agent-memory-en" lang="en">As humans, we encode memory constantly as we go about our lives. <a class="link"   href="https://stanford.edu/~jlmcc/papers/McCMcNaughtonOReilly95.pdf" >The hippocampus<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> plays a central role in this, capturing experiences in the moment so that memories form quickly and are immediately available. But only <a class="link"   href="https://www.science.org/doi/10.1126/science.adk8261" >some experiences<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> are consolidated into long-term knowledge.</p>
+
+<p>这种巩固大部分似乎发生在大脑”离线”的时候。在睡眠和安静<a class="link"   href="https://www.nature.com/articles/s41467-018-06213-1" >休息<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>期间，海马体会重放（replay）我们近期的经历。这被认为会逐渐把这些经历<a class="link"   href="https://www.nature.com/articles/s41593-019-0467-3" >蒸馏出来，整合进新皮层<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>（neocortex）——储存我们大部分”知识”的那个脑区。</p>
+<p class="agent-memory-en" lang="en">Much of that consolidation appears to happen when our brains are offline. As we sleep, and during quiet <a class="link"   href="https://www.nature.com/articles/s41467-018-06213-1" >rest<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>, the hippocampus replays our recent experiences. This is thought to gradually distill <a class="link"   href="https://www.nature.com/articles/s41593-019-0467-3" >those experiences and integrate them<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> into the neocortex—the part of our brains that stores most of what we think of as knowledge.</p>
+
+<p>智能体记忆可以采用类似的分工。智能体的大量工作本来就记录在日志和对话记录（transcript）中。Letta 和加州大学伯克利分校的研究者提出了<a class="link"   href="https://arxiv.org/abs/2504.13171" >睡眠时计算<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>（sleep-time compute），让模型利用交互之间的空闲时间来重新组织已有的上下文。同样的思路也可以帮助智能体组织记忆：通过回顾日志来修正错误，或产出新的笔记和表示。这个过程通常被称为<a href="https://platform.claude.com/docs/en/managed-agents/dreams"><strong>做梦</strong></a>（dreaming）（图 1）。</p>
+<p class="agent-memory-en" lang="en">Agent memory can use a similar division of labor. Agents capture much of their work in logs or transcripts. Researchers at Letta and UC Berkeley proposed <a class="link"   href="https://arxiv.org/abs/2504.13171" >sleep-time compute<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> as a way for models to use idle time between interactions to reorganize their existing context. The same idea can help agents organize their memory by reflecting on logs to fix mistakes or produce new notes and representations. This process is often <a class="link"   href="https://platform.claude.com/docs/en/managed-agents/dreams" >called<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> <span class="agent-memory-em"><a class="link"   href="https://research.google/blog/the-sleep-framework-a-new-way-for-llms-to-retain-knowledge-in-continual-learning/" >dreaming<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></span> (Figure 1).</p>
+
+<img src="/2026/11/13/agent-memory-components/fig01.webp" class="">
+
+<p>我们发现，做梦是帮助 Claude 获得有效记忆的一个有力工具。在这篇文章中，我们分享我们目前对智能体记忆的思考方式，并走读我们用来探索智能体记忆的多项评估——包括做梦的使用——以及各个组成部分对记忆组织的贡献。</p>
+<p class="agent-memory-en" lang="en">We've found that dreaming has been a useful tool for helping us give Claude effective memory. In this post, we share how we've come to think about agent memory and walk through several evaluations we've used to explore agent memory, including the use of dreaming, and what each component contributes to memory organization.</p>
+
+<h2 id="2-记忆笔记"><a href="#2-记忆笔记" class="headerlink" title="2. 记忆笔记"></a>2. 记忆笔记</h2><p>我们所说的”智能体记忆”，是指 Claude 从经验中获得的知识——包括与用户的交互、被分配的任务——并且跨会话保留，保存为之后可以读取的上下文。它不包含模型学习或管理上下文的其他方式，比如<strong>权重</strong>（weights，训练期间设定的内部参数）的变化、<a href="https://www.anthropic.com/research/in-context-learning-and-induction-heads"><strong>上下文内学习</strong></a>（in-context learning，单次对话中获得的知识），以及<a href="https://platform.claude.com/docs/en/build-with-claude/compaction"><strong>压缩</strong></a>（compaction，Claude 写下的摘要，用来替换较早的对话轮次，以便在新上下文窗口中继续工作）。</p>
+<p class="agent-memory-en" lang="en">By "agent memory," we mean knowledge that Claude gains from experience—including interactions with users and tasks it's been assigned—and that it retains between sessions, saved as context it can read later. It excludes other ways models can learn or manage context, such as changes to their <span class="agent-memory-em">weights</span> (the internal parameters set during training), <span class="agent-memory-em"><a class="link"   href="https://www.anthropic.com/research/in-context-learning-and-induction-heads" >in-context learning<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></span> (knowledge gained within a single conversation), and <span class="agent-memory-em"><a class="link"   href="https://platform.claude.com/docs/en/build-with-claude/compaction" >compaction<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></span> (summaries written by Claude that replace its older turns so it can continue working in a new context window).</p>
+
+<p>在人脑中，一段经历之前、之中或之后释放的化学信号可以<a class="link"   href="https://www.nature.com/articles/385533a0" >标记这段记忆<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>很重要。被标记的记忆在离线期间会被更频繁地重放。这个过程叫做<strong>重放</strong>（replay），有助于把它们稳定下来并整合进长期记忆。</p>
+<p class="agent-memory-en" lang="en">In the human brain, chemical signals released before, during, or after an experience can <a class="link"   href="https://www.nature.com/articles/385533a0" >mark a memory<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> as important. Marked memories tend to be replayed more often than unmarked ones during offline periods. This process, called <span class="agent-memory-em">replay</span>, helps stabilize and integrate them into long-term memory.</p>
+
+<p>类似地，Claude 可以在会话日志中当场标记显著事件，方便日后查找，也可以把它们<a class="link"   href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool" >写入<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>记忆存储，比如一个装满记忆笔记的文件夹（图 2）。但问题来了：Claude 怎么能在当下——还不知道接下来会发生什么的时候——判断什么才是显著的？</p>
+<p class="agent-memory-en" lang="en">Similarly, Claude can tag salient events in a session log as they happen, so they're easier to find later, or it can <a class="link"   href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool" >write<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> them to a memory store, such as a folder of memory notes (Figure 2). But how can Claude tell what's salient in the moment, before it knows what's coming next?</p>
+
+<img src="/2026/11/13/agent-memory-components/fig02.webp" class="">
+
+<h2 id="3-记忆可以是对未来需求的预测"><a href="#3-记忆可以是对未来需求的预测" class="headerlink" title="3. 记忆可以是对未来需求的预测"></a>3. 记忆可以是对未来需求的预测</h2><p>记忆，在某种意义上，是一种预测。智能体写下一条规则，就是在预测它所描述的模式还会再次相关。比如，写下一条已验证过的事实，就是在预测未来会话中的智能体会想直接依赖这条事实、不再二次核对。随着时间推移，Claude 做这类预测的能力已经大幅进步。</p>
+<p class="agent-memory-en" lang="en">Memory is, occasionally, a prediction. By writing down a rule, an agent predicts that the pattern it's describing will be relevant again. For instance, writing down a verified fact is a prediction that an agent in a future session will want to rely on that fact without double-checking it. Over time, Claude has become much better at making these kinds of predictions.</p>
+
+<p>看一个 <a class="link"   href="https://continual-learning-bench.com/news/cl-bench-1-0/" >Continual Learning Bench（CL-Bench）1.0<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 里的任务——这个基准衡量智能体利用记忆完成长程任务的能力。其中一项任务要求 Claude 查询数据库来回答一系列问题。Claude 给出答案后会被告知正确答案，并且可以写一条记忆来帮助回答后续问题。</p>
+<p class="agent-memory-en" lang="en">Consider a task from <a class="link"   href="https://continual-learning-bench.com/news/cl-bench-1-0/" >Continual Learning Bench (CL-Bench) 1.0<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>, a benchmark that measures an agent's ability to use memory in order to tackle long-horizon tasks. One particular task asks Claude to answer a series of questions by looking up information in a database. After Claude gives an answer, it's told the correct solution and can write a memory to help answer future questions.</p>
+
+<p>记忆在这里可以支撑一个<strong>学习循环</strong>：如果 Claude 答错了，它可以记录这次失败，提出关于错因的理论，验证这些理论，再把发现转化为今后作答的规则。</p>
+<p class="agent-memory-en" lang="en">Memory can support a learning loop here. If Claude gets a question wrong, it can record the failure, come up with theories about what went wrong, test those theories, and turn what it finds into a rule about how to answer in the future.</p>
+
+<p>我们用 <a class="link"   href="https://platform.claude.com/docs/en/managed-agents/overview" >Claude Managed Agents<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 跑了这个 CL-Bench 1.0 任务。Claude 每道题都在全新会话中开始，只有一个例外：它可以读取一个跨会话持久保存的<a class="link"   href="https://platform.claude.com/docs/en/managed-agents/memory" >记忆目录<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>里的文件。</p>
+<p class="agent-memory-en" lang="en">We ran the CL-Bench 1.0 task using <a class="link"   href="https://platform.claude.com/docs/en/managed-agents/overview" >Claude Managed Agents<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>. Claude started each question in a fresh session, with one exception: it could retrieve files from a <a class="link"   href="https://platform.claude.com/docs/en/managed-agents/memory" >memory directory<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> that persisted from one session to the next.</p>
+
+<p>不同模型建立学习循环的能力各不相同。Claude Sonnet 4.6 只走到”提出错因理论”这一步——它的记忆目录里散落着一堆文件，每份列着几条没验证过的猜测。</p>
+<p class="agent-memory-en" lang="en">Different models achieved different levels of success at creating their own learning loops. Claude Sonnet 4.6 got as far as generating theories about why an answer was wrong. Its memory directory contained a scattering of files, each listing several untested guesses.</p>
+
+<p>Claude Opus 4.7 把笔记整合成了一份单一参考文档，并开始标注哪些事实已核对、哪些仍未确认。Claude Sonnet 5 会在评分者核对后把每条答案标记为已确认，答错时写下更正。</p>
+<p class="agent-memory-en" lang="en">Claude Opus 4.7 consolidated its notes into a single reference document and began marking which facts it had checked and which were still unconfirmed. Claude Sonnet 5 marked each answer as confirmed after the grader had checked it, and wrote a correction when it had answered wrong.</p>
+
+<p>Claude Opus 5 是第一个<strong>闭环</strong>的模型。它的大部分条目都包含一条规则（以及它如何知道这条规则成立）、先前问题的答案，还有对途中发现的陷阱的明确警告（图 3）。</p>
+<p class="agent-memory-en" lang="en">Claude Opus 5 was the first of these models to close the loop. Most of its entries included a rule (and also how it knew the rule was true), answers to earlier questions, and clear warnings about traps it had discovered along the way (Figure 3).</p>
+
+<p>和 Opus 5 一样，Claude Opus 5.5 和 Claude Sonnet 5.5 都完成了闭环，用记忆捕捉关于如何答好后续问题的、经过验证的规则。借助记忆，两者得分与 Opus 5 大致相当，不过它们不带记忆的基线成绩略高。</p>
+<p class="agent-memory-en" lang="en">Like Opus 5, Claude Opus 5.5 and Claude Sonnet 5.5 both closed the loop, using memory to capture validated rules about how to best answer future questions. With memory, both scored about the same as Opus 5, though their baseline performance without memory was slightly higher.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig03.webp" class="">
+
+<h2 id="4-Claude-学会了判断显著性"><a href="#4-Claude-学会了判断显著性" class="headerlink" title="4. Claude 学会了判断显著性"></a>4. Claude 学会了判断显著性</h2><p>我们还评估了 Claude 游玩《宝可梦 红》（Pokémon Red）的表现——这款游戏<a class="link"   href="https://www.youtube.com/watch?v=CXhYDOvgpuU" >考验 Claude 完成复杂长程任务<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>的能力——用它来检验 Claude 对”<strong>该往记忆里存什么</strong>“的判断。每局开始时，我们给每个模型一个记忆文件夹，游玩过程中可读可写（图 4）。</p>
+<p class="agent-memory-en" lang="en">We also evaluated Claude's ability to play <span class="agent-memory-em">Pokémon Red</span>, a game that <a class="link"   href="https://www.youtube.com/watch?v=CXhYDOvgpuU" >challenges Claude to navigate<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> complex long-horizon tasks, as a test of Claude's judgment about <span class="agent-memory-em">what</span> to save to memory. At the start of each run, we gave each model a folder of memory files that it could read from and write to while it played (Figure 4).</p>
+
+<p>我们比较了 Claude Sonnet 3.7 和 Claude Fable 5 各一局、都进行到约 10000 步时的记忆文件夹。一个关键差异是两个模型各自认为什么值得记。Sonnet 3.7 假定一切都可能重要，不加区分地往记忆里写。它的记忆文件夹成了一座遭遇档案库：每场战斗、每件捡到的道具、每个遇到的 NPC 往往都有单独的文件。最终 Sonnet 3.7 在 225 个文件夹里写了 <strong>413 个记忆文件</strong>，拿到一枚徽章（徽章标志玩家进度）。</p>
+<p class="agent-memory-en" lang="en">We compared the memory folders from one run each of Claude Sonnet 3.7 and Claude Fable 5, when each was about 10,000 steps into the game. A key difference we noticed was what each model thought was worth remembering. Sonnet 3.7 assumed everything might matter and wrote to memory indiscriminately. Its memory folder contained an archive of encounters, often with a separate file for each battle it fought, each item it found, and each non-player character it met. Ultimately, Sonnet 3.7 wrote 413 memory files across 225 folders and earned one badge (badges mark a player's progress through the game).</p>
+
+<p>相比之下，Fable 5 只在两个文件夹里写了<strong>九个文件</strong>，外加一个名为 <code>global.md</code> 的顶层文件，拿到了四枚徽章。</p>
+<p class="agent-memory-en" lang="en">Fable 5, by comparison, wrote nine files in two folders, plus a single top-level file called <span class="agent-memory-code">global.md</span>, and earned four badges.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig04.webp" class="">
+
+<p>Sonnet 3.7 的做法之所以出问题，主要是因为宝可梦的游戏状态一直在变——它那份详细记录在持续过时。结果随着游戏推进，它不得不把越来越多的时间和资源花在翻检记忆、而不是玩游戏上。比如在第 10000 步左右，Sonnet 3.7 开始建它的第四个”总纲”（master）记忆文件夹：接下来 17 步里它创建了 6 个文件、删了 9 个，在游戏里却一个动作都没做。</p>
+<p class="agent-memory-en" lang="en">Sonnet 3.7's approach was a problem mainly because the game state of Pokémon changes constantly—Sonnet 3.7's detailed record was continuously going out of date. As a result, as Claude progressed, it had to spend more time and resources combing through its memories rather than playing the game. Around step 10,000, for example, Sonnet 3.7 started its fourth folder of "master" memory files. Over the next 17 steps, it created six files, deleted nine others, and took no actions in the game itself.</p>
+
+<p>Fable 5 则把记忆用在游戏没有明确告诉它的事情上。Sonnet 3.7 写进记忆的一些信息——比如玩家有多少钱、在地图哪个位置——每一回合都能直接从屏幕读到，存下来纯属冗余。相反，关于策略、计划、验证过的规则的记忆，只有 Claude 自己琢磨出来才存在，不写下来就消失了。</p>
+<p class="agent-memory-en" lang="en">Fable 5's approach used memory for things the game didn't explicitly tell it. Some of the kinds of information Sonnet 3.7 wrote to memory—such as how much money the player has or where the player is on the map—can be read off the screen every turn, so storing it is redundant. By contrast, memory files about strategy, plans, and tested rules exist only if Claude works them out, and they disappear unless Claude writes them down.</p>
+
+<p>Fable 5 相应地组织了记忆。<code>global.md</code> 充当仪表盘，存着当前目标、攻克道馆（赢取徽章的挑战）的预案，以及模型自己定的记忆使用规则。<code>locations</code> 文件夹存特定路线的导航方案，<code>gameplay</code> 文件夹存基于它对游戏机制理解的战术。比如，连续七个精灵球都没抓到鲤鱼王（最容易抓的宝可梦之一）之后，Claude 写道：”如果连续 3+ 个球失败，就<strong>改变节奏</strong>（在菜单步骤之间插入额外的’等待’按键）——这么做了之后立刻抓到了。”</p>
+<p class="agent-memory-en" lang="en">Fable 5 organized its memory accordingly. Its <span class="agent-memory-code">global.md</span> file acted as a dashboard, holding the current goal, a prewritten plan for tackling gyms (the challenges where badges are won), and the model's own rules for using memory. A <span class="agent-memory-code">locations</span> folder held plans for navigating particular routes, and a <span class="agent-memory-code">gameplay</span> folder held strategies based on what it had learned about how the game works. For example, after seven Poké Balls in a row failed to catch a Magikarp (one of the easiest Pokémon to catch), Claude wrote, "If 3+ balls fail in a row, VARY the timing (insert extra 'wait' presses between menu steps) - the catch landed right after doing this."</p>
+
+<p>凭借小得多的记忆文件夹，Fable 5 在游戏里的进展远超 Sonnet 3.7。Opus 5.5 采取了类似方式：维护一小文件夹的记忆笔记，追踪当前目标和下一步行动，边玩边重写，最终通关。</p>
+<p class="agent-memory-en" lang="en">With a much smaller memory folder, Fable 5 progressed much further in the game than Sonnet 3.7. Opus 5.5 took a similar approach: it kept a small folder of memory notes that tracked its current goal and next steps, rewrote them as it played, and beat the game.</p>
+
+<h2 id="5-引导-Claude-写记忆"><a href="#5-引导-Claude-写记忆" class="headerlink" title="5. 引导 Claude 写记忆"></a>5. 引导 Claude 写记忆</h2><p>我们发现：告诉 Claude 记忆是<strong>干什么用的</strong>有帮助，但不要告诉它<strong>怎么用</strong>。在 CL-Bench 上，我们只告诉 Claude 有一个记忆文件夹可用。这条宽泛指引就足以让 Opus 4.7 和 Opus 5 有效地使用记忆，并带来明显的性能提升（图 3）。</p>
+<p class="agent-memory-en" lang="en">We've found that it helps to tell Claude what memory is for, but not <span class="agent-memory-em">how</span> to use it. On CL-Bench, we simply told Claude that a memory folder was available. That general guidance was enough for Opus 4.7 and Opus 5 to use memory effectively, and it gave both a noticeable boost in performance (Figure 3).</p>
+
+<p>我们还测试了给模型下达”该往记忆里写什么”的具体规则，每次测试一条规则，比较每条规则下记忆带来的提升与无规则时的提升。当规则设为”只记录失败”时，Opus 5 和 Opus 4.7 都丢掉了记忆带来的大部分收益（图 5 右）。对更强的模型来说，放手让它们自己判断显著性，比预先设死规则更有效——硬性规则反而可能削弱表现。</p>
+<p class="agent-memory-en" lang="en">We also tested giving the models specific rules about what they should write to memory, with one rule per test. We compared how much each model gained from memory with each rule against how much it gained without it. When we set a rule to "record only failures," both Opus 5 and Opus 4.7 lost much of the performance boost that memory gave them (Figure 5, right). For stronger models, giving them freedom to judge salience was more effective than setting fixed rules in advance, and those rules could end up weakening performance.</p>
+
+<p>我们还注意到，引导对旧模型帮助最大。比如 Sonnet 4.6 经常不去读记忆目录里的文件，也不验证自己关于错因的理论。</p>
+<p class="agent-memory-en" lang="en">We also noticed that steering helped older models the most. For instance, Sonnet 4.6 often didn't read files from its memory directory and failed to test its theories about why an answer was wrong.</p>
+
+<p>这种情况下，提示 Claude 先读记忆文件再作答、然后明确验证理论，几乎让它的基准分翻倍（图 5 左）。Sonnet 5 则完全自发：无需提示，10 次里 9 次作答前先读记忆；Sonnet 4.6 不到一半。</p>
+<p class="agent-memory-en" lang="en">In this case, prompting Claude to read its memory files before answering—and then to explicitly test its theories—nearly doubled its benchmark score (Figure 5, left). Sonnet 5 does this on its own. Without being prompted to, it read its memory before answering 9 out of 10 times. By comparison, Sonnet 4.6 did this less than half of the time.</p>
+
+<p>对于前沿 Claude 模型，我们通常只给简单指引：当用户要求、或某事明显值得记住时，创建记忆笔记——这个判断交给 Claude 自己。</p>
+<p class="agent-memory-en" lang="en">With frontier Claude models, we typically give simple guidance to create memory notes when a person asks them to or when something is clearly worth remembering, and we leave that judgment up to Claude.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig05.webp" class="">
+
+<h2 id="6-做梦可以纠正记忆"><a href="#6-做梦可以纠正记忆" class="headerlink" title="6. 做梦可以纠正记忆"></a>6. 做梦可以纠正记忆</h2><p>Claude 写记忆依据的是会话内的显著性判断，于是一条从一开始就错的笔记、或随环境变化而失准的笔记，可能在之后的会话里被 Claude 读到、并被信任。</p>
+<p class="agent-memory-en" lang="en">Since Claude writes to memory based on what it judges to be salient in-session, a note that's wrong from the start or that drifts as the environment changes can be read, and trusted, by Claude in a later session.</p>
+
+<p>做梦给了 Claude 一种拿笔记对照原始对话记录做检验的手段（图 6）。我们看到过一个正面例子：Claude 用 Managed Agents 玩宝可梦，记忆挂载在一个目录上。</p>
+<p class="agent-memory-en" lang="en">Dreaming gives Claude a way to test its notes against the original transcripts (Figure 6). We saw a positive example of this when Claude played Pokémon using Managed Agents with a mounted directory for its memories.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig06.webp" class="">
+
+<p>游戏中有一段，玩家要穿过月见山（Mt. Moon）——一个洞窟，入口在地图西侧、出口在东侧。入口附近有个陷阱：一道单向崖边，会把玩家摔回来时的那条路，且没有明显的路爬回去。Claude 把山入口处的宝可梦中心（PokéCenter）当作地标，所以它会不会走下那道崖，取决于它以为宝可梦中心在山的哪一侧。</p>
+<p class="agent-memory-en" lang="en">In one part of the game, the player has to get through Mt. Moon, a cave system with its entrance on the west side of the map and its exit on the east. Near the entrance is a trap: a one-way ledge that drops the player onto the route they came from, with no clear way to climb back up. Claude was using the PokéCenter, a building at the mountain's entrance, as a landmark, so whether it walked off the ledge depended on which side of the mountain it thought the PokéCenter was on.</p>
+
+<p>有一次，Claude（错误地）写下宝可梦中心在东侧。它从宝可梦中心走出来时宣布”月见山在我身后”，并更新笔记：”月见山 完成”。可月见山并不在它身后。几个动作之后，Claude 翻过崖边，落回了来时的那条路（图 7）。它的导航工具没显示这个落差，于是 Claude 得出结论”我冲过头跑到很西边了”，认为自己一直站在正确的一侧。其实没有。</p>
+<p class="agent-memory-en" lang="en">At one point, Claude wrote down (incorrectly) that the PokéCenter was on the east side. When it walked out of the PokéCenter, it announced, "Mt Moon is behind me," and updated its notes: "Mt Moon DONE." But Mt. Moon was not behind it. A few actions later, Claude went over the ledge and landed back on the route it had come from (Figure 7). Its navigation tool didn't show the drop, so Claude concluded, "I overshot far west," and that it had been on the correct side all along. It hadn't.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig07.webp" class="">
+
+<p>我们接着测试做梦能否帮 Claude 避开这个陷阱。我们对那份包含错误位置的文件夹执行了做梦：Claude 把笔记与该会话的对话记录对照，抓到了错误，重写了笔记。对话记录给了 Claude 一个用来校验记忆的基准事实（ground truth）。拿着改对的笔记，Claude 径直重返月见山，最终抵达华蓝市（Cerulean City）。</p>
+<p class="agent-memory-en" lang="en">We then tested whether dreaming could help Claude avoid this trap. We ran dreaming on the memory folder that contained the wrong location for the PokéCenter: Claude checked the note against the session transcript, caught its error, and rewrote it. The transcript gave Claude a ground truth to validate its memory against. With the corrected memory note, Claude went straight back into Mt. Moon and eventually reached Cerulean City.</p>
+
+<p>而在笔记未纠正的那一局里，Claude 三次跌回那条老路。第三次失败后它似乎放弃了，写道：”我打算停下来，不再循环。”我们设置的自动回复命令它继续。它照做了——一路走回月见山之前的尼比市（Pewter City），指望在那里治疗和补给。这一局结束，Claude 始终没能抵达华蓝市。</p>
+<p class="agent-memory-en" lang="en">In the run with the uncorrected note, Claude dropped back onto that earlier route three times. After the third failure, Claude seemed to give up, writing, "I'm going to stop rather than keep looping." Our setup's automatic reply instructed it to continue. So it did, all the way back to Pewter City, the town before the mountain, where it hoped to heal and restock. The run ended without Claude ever reaching Cerulean City.</p>
+
+<p>记忆加做梦的一局在<strong>第 1935 步抵达华蓝市</strong>。</p>
+<img src="/2026/11/13/agent-memory-components/fig08.webp" class="">
+
+<h2 id="7-做梦可以构建新的记忆表示"><a href="#7-做梦可以构建新的记忆表示" class="headerlink" title="7. 做梦可以构建新的记忆表示"></a>7. 做梦可以构建新的记忆表示</h2><p>借助做梦，Claude 可以构建帮助在记忆中导航的表示（图 9）。它使用的一类记忆表示叫做 <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"><strong>wiki</strong></a>：由 Claude 编写维护的一组页面，汇集它对某一主题的全部所知，并链接到其他笔记。这些链接实际上给了 Claude 一张地图，让它可以在记忆中筛拣、需要时高效定位记忆。</p>
+<p class="agent-memory-en" lang="en">With dreaming, Claude can build representations to help navigate memory (Figure 9). One type of memory representation it uses is called a <span class="agent-memory-em"><a class="link"   href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" >wiki<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></span>, a collection of pages written and maintained by Claude that gathers what Claude knows about one subject and links it to other notes. These links effectively provide Claude with a map it can use to sift through its memory and efficiently locate memories when they're needed.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig09.webp" class="">
+
+<p>wiki 这类表示能帮 Claude 穿行于不断增长的知识库。我们用一批内部文档探索了 wiki 作为记忆表示的收益——约 35 万个文件、约 4.2 亿 token，来自我们五月收购的软件公司 Stainless。我们围绕这批语料出了 25 道题的评估集，给 Claude 一个搜索工具去探索，并指示它利用做梦基于这些文件构建 wiki。在 128 个会话里，我们让 Opus 5 智能体探索文件、编写或修正互相链接的 wiki 页面、合并重复项、对照原始资料核查论断。</p>
+<p class="agent-memory-en" lang="en">Representations like wikis can help Claude traverse its ever-growing knowledge base. We explored the benefit of wikis as a memory representation using a corpus of internal documents—about 350,000 files, roughly 420M tokens—from Stainless, a software company we acquired in May. We created an evaluation set of 25 questions about this corpus and gave Claude a search tool to explore it. We also instructed Claude to build a wiki based on these files using dreaming. Over 128 sessions, we prompted Opus 5 agents to explore the files, write or correct linked wiki pages, merge duplicates, and check claims against the sources.</p>
+
+<p>每个会话都建立在此前会话的进展之上，用一个共享日志协调。随着做梦从 2 个会话扩展到 128 个，25 道题的得分从 13% 涨到了评分标准的 48%（图 10）。</p>
+<p class="agent-memory-en" lang="en">Each session built on the progress that agents made in prior sessions, using a shared log to coordinate work. As we scaled dreaming from two sessions to 128, performance on the 25 questions grew from 13% to 48% of graded criteria (Figure 10).</p>
+
+<p>Claude 是增量式地构建 wiki 的：建好初版后，用一轮轮做梦去增补、编辑、修剪。做梦早期，Claude 的知识像新员工，仅凭 wiki 答题能力有限；做梦越多，知识地图越丰富，像资深员工。测试中我们发现，wiki 配合搜索工具一起用时帮助最大——两者齐上时，Claude 的总分随 wiki 增长从 <strong>54% 升到 61%</strong>，而只用搜索是 53%。Claude 光靠 wiki 答题的最好成绩是 48%。搜索加 wiki 还让<strong>每道题省下约 2 万 token</strong>。</p>
+<p class="agent-memory-en" lang="en">Claude builds its wikis incrementally. After creating an initial wiki, it uses subsequent rounds of dreaming to add to, edit, or prune it. In the early rounds of dreaming, Claude's knowledge is like that of a new employee, and its ability to answer questions based on the wiki alone is limited. The more it dreams, the richer its knowledge map grows, like that of a seasoned employee. In our tests, we found that the wiki helped Claude the most when we also gave it access to a search tool. When it used both search and the wiki, Claude's aggregate score rose from 54% to 61% as that wiki grew, compared with 53% when it had access to the search tool alone. Claude's best score was 48% when it used only the wiki to answer questions. Using search and the wiki also saved about 20,000 tokens per question.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig10.webp" class="">
+
+<p>我们想测哪些类型的任务能从 wiki 获益，于是用了 <a class="link"   href="https://github.com/harveyai/harvey-labs" >Harvey LAB<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 基准加一组并购文档。该基准给 Claude 一批文档，要求它基于内容生成法律摘要（legal brief），再按一系列标准打分。虽说可能不如看宝可梦一局精彩，但这些评估提供了多样的文档集来建 wiki。</p>
+<p class="agent-memory-en" lang="en">We wanted to test which kinds of tasks benefited from Claude having a wiki. To do this, we used the <a class="link"   href="https://github.com/harveyai/harvey-labs" >Harvey LAB<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> benchmark along with a collection of documents about a merger. The benchmark gives Claude a set of documents and asks Claude to generate a legal brief based on their content. The benchmark then grades the brief against a list of criteria. While a tad less engaging, perhaps, than a Pokémon run, these evaluations give us diverse collections of documents to build wikis from.</p>
+
+<p>我们指示 Claude 从文档构建 wiki，然后让它分别仅凭 wiki、以及靠直接文件检索来答题或写摘要。一项测试就并购提了 24 个问题（图 11 左），超过一半需要跨多份文档找信息，不少还需要判断力或算术。在这些题上（红线和橙线），Claude 查 wiki 得 87%，只用搜索得 73%。</p>
+<p class="agent-memory-en" lang="en">We instructed Claude to build a wiki from the documents. We then asked Claude to answer questions (about the merger) or generate legal briefs (the LAB benchmark) both from the wiki and from a direct file search. One test asked 24 questions about the merger (Figure 11, left), more than half of which needed Claude to find information across several documents, and many of which also needed Claude to use judgment or do math. On those items (red and orange lines), Claude scored 87% when it consulted the wiki, compared with 73% when it used search alone.</p>
+
+<p>另一些情况下 wiki 就没那么有用了。一项 LAB 任务（图 11 右）里，摘要标准大多靠单份文档的文本检索就能拿到，wiki 相比搜索没有明显增益。另一项 LAB 任务里，wiki 长得比文档本身还大（图 12）——就像博尔赫斯一段话短篇《论科学的精确性》里那些制图师，绘出了一幅与帝国本身一样大的地图：Claude 做出了一份极其详尽、实际上什么也没抽象掉的 wiki。</p>
+<p class="agent-memory-en" lang="en">In other cases, the wiki was less useful. On one LAB task (Figure 11, right), brief criteria often could be retrieved with a text search from a single document, and the wiki showed no clear gain in performance relative to search. On another LAB task, the wiki grew larger than the documents themselves (Figure 12). Like the mapmakers in Borges's one-paragraph short story "On Exactitude in Science," who drafted a map so detailed it was as large as the empire it represented, Claude had made an extremely detailed wiki that effectively abstracted nothing.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig11.webp" class="">
+
+<img src="/2026/11/13/agent-memory-components/fig12.webp" class="">
+
+<h2 id="8-做梦可以把笔记提升到记忆层级的高层"><a href="#8-做梦可以把笔记提升到记忆层级的高层" class="headerlink" title="8. 做梦可以把笔记提升到记忆层级的高层"></a>8. 做梦可以把笔记提升到记忆层级的高层</h2><p>做梦还可以把笔记浮到记忆层级的顶端，由智能体 harness 在每个会话开始时预加载进 Claude 的上下文（图 13）。这意味着 Claude 不必去搜它们，甚至不必知道有东西可搜。</p>
+<p class="agent-memory-en" lang="en">Dreaming can also float notes to the top of the memory hierarchy, and the agent harness can preemptively load them into Claude's context at the start of every session (Figure 13). This means Claude doesn't need to search for them, or even to know there's something to search for.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig13.webp" class="">
+
+<p>把记忆提升进新会话（一种<strong>上下文注入</strong>，context injection）必须谨慎：注入的记忆消耗宝贵 token；一条错误笔记会被带进每一个会话；而且加载了也不保证 Claude 会照办——我们 <a class="link"   href="https://code.claude.com/docs/en/memory" >Claude Code<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 的文档就警告过，指令文件越长遵从度越低。所以记忆层级的顶层必须保持相当小，做梦在这层的大量工作就是保持它小——把部分细节下移层级、留下链接。</p>
+<p class="agent-memory-en" lang="en">Promoting memories into a new session (a form of <span class="agent-memory-em">context injection</span>) must be done carefully. Injected memories use up valuable tokens, and an incorrect note can be carried into every session. Loading a note also doesn't guarantee that Claude acts on it: our documentation on <a class="link"   href="https://code.claude.com/docs/en/memory" >Claude Code<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> warns that longer instruction files reduce adherence. So the top layer of the memory hierarchy has to stay relatively small, and much of dreaming's work here is keeping it that way—by moving some details down the hierarchy and leaving links behind.</p>
+
+<p>Claude Code 的 <a class="link"   href="https://code.claude.com/docs/en/memory" >auto memory（自动记忆）<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>用同样的方式保持注入层小巧，由 Claude 在会话中维护。Claude 不会把全部 auto memory 装进每个会话的上下文窗口，只加载 <code>MEMORY.md</code> 的前 200 行或 25 KB。这个头部充当索引，告诉 Claude 它知道什么、去哪找。</p>
+<p class="agent-memory-en" lang="en">Claude Code's <a class="link"   href="https://code.claude.com/docs/en/memory" >auto memory<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> keeps its injected layer small in the same way, with Claude maintaining it during the session. Claude doesn't load all of its auto memory into every session's context window. It loads only the first 200 lines or 25 KB of <span class="agent-memory-code">MEMORY.md</span>. This header serves as an index, which shows Claude what it knows and where to find it.</p>
+
+<h2 id="9-做梦可以让记忆聚焦特定目标"><a href="#9-做梦可以让记忆聚焦特定目标" class="headerlink" title="9. 做梦可以让记忆聚焦特定目标"></a>9. 做梦可以让记忆聚焦特定目标</h2><p>做梦还能塑造记忆生长的方式。像 <a class="link"   href="https://support.claude.com/en/articles/17631495-get-started-with-claude-duet" >Claude Duet<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 这样的助手，往往受益于围绕它帮助的那个人来组织记忆——做梦可以被调校为服务于特定目标来构建记忆。</p>
+<p class="agent-memory-en" lang="en">Dreaming can also shape how memory grows. An assistant like <a class="link"   href="https://support.claude.com/en/articles/17631495-get-started-with-claude-duet" >Claude Duet<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>, for example, often benefits from having memories that are organized around the person it's helping, and dreaming can be tuned to build memory in service of a particular goal.</p>
+
+<p>指导记忆生长的指令因任务而异，它们告诉 Claude 什么信息真正重要。比如 LAB 基准里一项任务模拟公司收购、给出一组合同，摘要按是否正确描述合同条款评分。</p>
+<p class="agent-memory-en" lang="en">The instructions that guide how memory grows differ by task and tell Claude what information actually matters. For example, one task in the LAB benchmark simulates a company acquisition and provides a set of contracts. The brief is graded on whether it correctly describes the contract terms.</p>
+
+<p>我们最初给 wiki 生成的指令很基础，没告诉 Claude 这份 wiki 会怎么用。这项任务高度依赖合同条款，而构建 wiki 期间，多个智能体同时往一张共享的合同条款表里写（图 14 左）。</p>
+<p class="agent-memory-en" lang="en">We started with basic instructions for generating the wiki that didn't tell Claude <span class="agent-memory-em">how</span> to use the wiki. This task relied heavily on contract terms. While the wiki was being built, several agents wrote to a shared table of contract terms at the same time (Figure 14, left).</p>
+
+<img src="/2026/11/13/agent-memory-components/fig14.webp" class="">
+
+<p>结果 wiki 缺了关键事实：基于它生成的摘要只覆盖 57 条事实中的 41 条（<strong>72%</strong>）。复盘发现那张共享表对条款概括得很差、有些干脆缺失——因为智能体互相覆盖了对方的工作。</p>
+<p class="agent-memory-en" lang="en">The result was a wiki that was missing key facts. When we graded a brief generated from the wiki, Claude had included only 41 of the 57 facts (72%). When we looked at what had gone wrong, we found that the shared table summarized the contract terms poorly and was missing some of them altogether, because agents had overwritten one another's work.</p>
+
+<p>合同条款是 wiki 里最重要的部分，但指令没这么说。为了找到更好的指令，我们跑了一个循环：Claude 反思失败 → 提出指令修改 → 重建 wiki。这个循环让 Claude 自己发现了紧跟合同条款的重要性，并据此改写了建 wiki 的指令。</p>
+<p class="agent-memory-en" lang="en">The contract terms were the most important part of the wiki, but the instructions didn't say that. To find better instructions, we ran a loop in which Claude reflected on its failures, proposed a change to the instructions, and rebuilt the wiki. This loop allowed Claude to discover how important it was to follow the contract terms, and it rewrote the instructions for building the wiki accordingly.</p>
+
+<p>改版中每份合同在 wiki 里有独立页面、由单个智能体撰写、逐字引用条款而非概括进共享表。基于改进后 wiki 的摘要，<strong>100%</strong> 的评分标准都能满足——之前是 <strong>72%</strong>。</p>
+<p class="agent-memory-en" lang="en">Each contract got its own page in the wiki, written by a single agent, which quoted the terms word for word rather than summarizing them into a shared table. When we graded the brief generated from this improved wiki, 100% of the criteria could be met, up from 72%.</p>
+
+<h2 id="10-做梦可以填补会话遗留的缺口"><a href="#10-做梦可以填补会话遗留的缺口" class="headerlink" title="10. 做梦可以填补会话遗留的缺口"></a>10. 做梦可以填补会话遗留的缺口</h2><p>Claude 写记忆笔记时，只看得见那一个会话里的上下文。做梦可以跨许多会话搜索，发现共同模式、纠正共性错误。</p>
+<p class="agent-memory-en" lang="en">When Claude writes memory notes, it sees only the context in <span class="agent-memory-em">that</span> particular session. Dreaming can search across many sessions to find common patterns or correct common mistakes.</p>
+
+<p>为 LAB 基准建 wiki 时（示例见图 14），Claude 有时会链接到还没创建的页面。第二轮做梦补上了许多这类缺口。一项任务里（图 15），做梦发现 wiki 中九个指向缺失页面的链接，把它们重定向到同一文档的既有页面，还新增了三个页面（含一个索引）来改进 wiki。</p>
+<p class="agent-memory-en" lang="en">When building the wikis for the LAB benchmark (as an example, see Figure 14), sometimes Claude would link to pages that hadn't yet been created. A second dreaming pass closed many of these gaps. On one task (Figure 15), dreaming found nine links to a missing page in the wiki and repointed them to an existing page for the same document. It also added three new pages, including an index, to improve the wiki.</p>
+
+<img src="/2026/11/13/agent-memory-components/fig15.webp" class="">
+
+<h2 id="11-回望过去，面向未来"><a href="#11-回望过去，面向未来" class="headerlink" title="11. 回望过去，面向未来"></a>11. 回望过去，面向未来</h2><p>关于智能体记忆系统的设计还有许多开放问题。其一是 <strong>Claude 该在何时创建记忆</strong>。执行任务时写入记忆存储（文件夹、文件或数据库），能在源头捕捉显著性、让重要细节对后续轮次立即可用；但当场记笔记必然分散 Claude 对主任务的注意力。做梦则可以把记忆创建推到后台，但其产出未必能立即被 Claude 用上。</p>
+<p class="agent-memory-en" lang="en">There are many open questions about how to design memory systems for agents. One is when Claude should create memory. When Claude works on a task, it can write to a memory store (e.g., a folder, file, or database), capturing salience at the source and making important details immediately available for future turns or sessions. But logging notes in the moment inevitably draws Claude's attention away from its main task. In contrast, dreaming can push memory creation to the background, but any outputs from dreaming may not be immediately accessible to Claude.</p>
+
+<p>另一个问题是<strong>如何让记忆可靠地保持最新</strong>。Claude 可能做出错误预测，或从一开始就把错误规则写进记忆；记忆也会随环境变化而漂移、失效。做梦是纠错的一种方式（图 8），但要耗算力。让 Claude 持续检查全部记忆未必现实——更可行的或许是让做梦聚焦在易变的信息上，或仔细调节做梦的节奏（比如按记忆的访问频率）。</p>
+<p class="agent-memory-en" lang="en">Another question is how to keep memory reliably up to date. Claude can make incorrect predictions or write rules to memory that are wrong from the start. Memory can also drift and become irrelevant as the environment changes. Dreaming is one way to fix these mistakes (Figure 8), but it requires compute. Directing Claude to continuously check <span class="agent-memory-em">all</span> its memories might not be practical. It may be important instead to focus dreaming on information that's likely to change or to carefully tune the cadence of dreaming (e.g., based on how often memories are accessed).</p>
+
+<p>把对话记录检索当作 Claude 记忆的地基也是合理的思路。表示（如 wiki）与搜索结合（图 10）有时很有效，但 Claude 需要持续投入算力维护这些表示，防止错误和幻觉越积越多。</p>
+<p class="agent-memory-en" lang="en">It's also reasonable to consider transcript search as the foundation of Claude's memory. Combining representations (e.g., wikis) with search (Figure 10) can sometimes be effective. But Claude needs to use compute to maintain memory representations and make sure they don't accumulate errors or hallucinations.</p>
+
+<p>尽管 Claude 对显著性的判断已经长进，没有哪个模型能真正预知未来的轮次。做梦给了 Claude 向后看的机会：用算力组织记忆、纠正错误、维护让未来会话更容易访问记忆的表示。随着 Claude 能力增强，记忆系统也会演进——我们在设计 Claude 的记忆系统上，还有很多要学的。</p>
+<p class="agent-memory-en" lang="en">Even though Claude's judgment about salience has improved, no model can really know what will happen in future turns. Dreaming gives Claude an opportunity to look <span class="agent-memory-em">backward</span> and use compute to organize its memory, correct mistakes, and maintain representations that allow future sessions to access memory more readily. Memory systems will evolve as Claude gets more capable, and we still have a lot to learn about designing Claude's memory systems.</p>
+
+<p>入门做梦与知识 wiki，参见官方 cookbook：<a class="link"   href="https://platform.claude.com/cookbook/managed-agents-cma-dreaming-with-a-dynamic-workflow" >dreaming 动态工作流<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> 与 <a class="link"   href="https://github.com/anthropics/claude-quickstarts/tree/main/managed-agents/knowledge-wiki" >knowledge wikis 快速上手<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>。</p>
+<p class="agent-memory-en" lang="en">See our cookbooks for <a class="link"   href="https://platform.claude.com/cookbook/managed-agents-cma-dreaming-with-a-dynamic-workflow" >getting started with dreaming<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> and <a class="link"   href="https://github.com/anthropics/claude-quickstarts/tree/main/managed-agents/knowledge-wiki" >knowledge wikis<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a>.</p>
+
+<h2 id="12-术语对照表"><a href="#12-术语对照表" class="headerlink" title="12. 术语对照表"></a>12. 术语对照表</h2><table>
+<thead>
+<tr>
+<th>英文</th>
+<th>本文译法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dreaming</td>
+<td>做梦</td>
+<td>智能体在空闲时回顾会话日志、重组记忆的离线过程，对应人类睡眠中的记忆巩固</td>
+</tr>
+<tr>
+<td>sleep-time compute</td>
+<td>睡眠时计算</td>
+<td>Letta 与 UC Berkeley 提出的概念，dreaming 的思想来源</td>
+</tr>
+<tr>
+<td>salience &#x2F; salient</td>
+<td>显著性 &#x2F; 显著的</td>
+<td>判断”什么值得记住”的能力，文中衡量模型代际进步的主线</td>
+</tr>
+<tr>
+<td>transcript</td>
+<td>会话日志 &#x2F; 对话记录</td>
+<td>智能体全部行为的原始记录，做梦时的校验基准</td>
+</tr>
+<tr>
+<td>compaction</td>
+<td>压缩</td>
+<td>Claude 写摘要替换旧对话轮次，以便换新上下文窗口继续工作</td>
+</tr>
+<tr>
+<td>context injection</td>
+<td>上下文注入</td>
+<td>把高层记忆预加载进每个新会话的上下文</td>
+</tr>
+<tr>
+<td>memory hierarchy</td>
+<td>记忆层级</td>
+<td>日志 → 记忆笔记 → 记忆表示（wiki）→ 注入上下文，自下而上</td>
+</tr>
+<tr>
+<td>replay</td>
+<td>重放</td>
+<td>离线期间重放被标记的记忆，巩固进长期记忆</td>
+</tr>
+</tbody></table>
+<p>宝可梦专名采用官方中文：月见山（Mt. Moon）、华蓝市（Cerulean City）、尼比市（Pewter City）、鲤鱼王（Magikarp）、宝可梦中心（PokéCenter）。</p>
+<p><span class="agent-memory-note">原文版权归 Anthropic 所有 · <a class="link"   href="https://www.anthropic.com/research/components-of-agent-memory" >原文地址<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a> · <a class="link"   href="https://platform.claude.com/cookbook/managed-agents-cma-dreaming-with-a-dynamic-workflow" >Cookbook<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></span></p>
+<script data-swup-reload-script>
+/* 图注：按图号注入英文原文 caption。
+   不放 asset_img 参数里是因为撇号/引号/百分号会被 Nunjucks 标签解析吞掉
+   （实测 fig05 的撇号曾吞掉 fig06 整个标签）。 */
+(function () {
+  var CAPTIONS = {
+    fig01: `Diagram of a memory hierarchy between one session and the next. From bottom to top: transcripts (a searchable event log), memory notes written by Claude, memory representations such as wikis, and injected context loaded into every session. Inside a box labeled "Dreaming," arrows run from transcripts up to each layer, and in both directions between neighboring upper layers.`,
+    fig02: `The same memory hierarchy, with the memory notes layer highlighted. An arrow runs from the session directly to the memory notes, described as salient observations written by Claude.`,
+    fig03: `Left: bar chart of mean reward on the CL-Bench database task, stateless baseline versus memory store. Opus 5.5: 0.655, 0.838. Sonnet 5.5: 0.644, 0.833. Opus 5: 0.564, 0.828. Opus 4.7: 0.383, 0.700. Sonnet 5: 0.306, 0.610. Sonnet 4.6: 0.330, 0.364. Right: line chart of running-mean reward over 30 questions for the same models, with and without memory.`,
+    fig04: `Two treemaps of Pokémon memory directories at the same scale, where area shows characters of memory. Claude Sonnet 3.7's is large and crowded, with 413 files and 977,930 characters across folders such as locations, main, battles, and several "consolidated" folders. Claude Fable 5's is small, with 10 files and 43,406 characters in locations, gameplay, and global.md.`,
+    fig05: `Left: bar chart of Sonnet 4.6's mean reward on the CL-Bench database task: 0.330 at baseline, 0.364 with memory, and 0.641 with memory and refined instruction. Reference lines mark Opus 4.7 with memory at 0.700 and Opus 5 with memory at 0.828. Right: change in memory gain when told to record only failures: Opus 5, −0.234; Opus 4.7, −0.150; Sonnet 4.6, −0.020.`,
+    fig06: `The memory hierarchy with dreaming, highlighting an arrow from the transcripts layer up to the memory notes layer, which shows dreaming correcting notes against transcripts.`,
+    fig07: `Two Pokémon map panels with the agent next to a ledge. Left, "Raw memory," where the stored note is wrong: an arrow shows the agent heading for the next city. Right, "Memory + dreaming," where an offline pass corrected the note: an arrow shows the agent heading back to the cave entrance.`,
+    fig08: `Line chart of progress toward Cerulean over 3,000 cumulative actions. The memory plus dreaming run reaches Cerulean at action 1,935. The raw memory run falls off the ledge and backtracks to Pewter. The run with no memory never reaches Cerulean.`,
+    fig09: `The memory hierarchy with dreaming, highlighting arrows from transcripts and from memory notes up to the memory representations layer, such as wikis.`,
+    fig10: `Center: line chart of graded criteria met as wiki generation grows from 2M to 128M dreaming tokens. Wiki plus search tool rises from 54% to 61%, wiki alone rises from 13% to 48%, and the search tool with no wiki is flat at 53%. Left and right: network graphs of an example wiki, with 103 pages and 766 links after 2 sessions and 222 pages and 12,893 links after 128 sessions.`,
+    fig11: `Two diagrams linking graded criteria to source documents. Left, the task where the wiki showed more benefit: most of the 24 criteria connect to two or more of 10 documents, and nine need judgment or arithmetic. Right, the task where the wiki showed less benefit: most of the 57 criteria can be found by text search in a single document, usually the deal overview memo.`,
+    fig12: `Diagram of a wiki build and second pass. On the left, a circle holds the corpus: 10 documents, 115 KB of text. An arrow leads to a larger circle holding the wiki built from it: 68 pages, 255 links, and 203 KB, or 1.77 times the corpus. Some of the wiki's pages have no links.`,
+    fig13: `The memory hierarchy with dreaming, highlighting arrows from transcripts and from memory representations up to the injected context layer at the top, which feeds into the next session.`,
+    fig14: `Two diagrams. Before: four agents write to the same shared page, provisions.md, and one agent's save erases another's lines; 41 of 57 graded facts survived. After: four agents each write their own contract's page, with terms copied word for word; all 57 of 57 graded facts survived.`,
+    fig15: `Two network graphs of a wiki. Before the second pass: 38 entries and 225 links, with nine links from six pages pointing to "escrow-agreement," a page that doesn't exist. After: 41 entries and 278 links, with all nine links pointing to "buyer-form-escrow-agreement" and three new pages: index, instructions email, and escalations.`
+  };
+  document.querySelectorAll('#article-container img').forEach(function (el) {
+    var m = (el.getAttribute('src') || '').match(/(fig\d+|cover)\.webp/);
+    if (!m || !CAPTIONS[m[1]]) return;
+    var cap = document.createElement('p');
+    cap.className = 'am-figcap';
+    cap.textContent = CAPTIONS[m[1]];
+    el.insertAdjacentElement('afterend', cap);
+  });
+})();
+</script>
+<!-- flag of hidden posts -->]]></content>
+      <categories>
+        <category>翻译</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+        <tag>Claude</tag>
+        <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</title>
+    <url>/2026/05/25/rag-grep-claude-code/</url>
+    <content><![CDATA[<p>原文链接：<a class="link"   href="https://zhuanlan.zhihu.com/p/2028510583213835970" >RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></p>
+<p>这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？</p>
+<p>我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，<code>LLM + grep/ripgrep + 文件读取</code> 这种动态检索方式，很多时候比“提前切分、向量化、建索引”的传统 RAG 更直接。</p>
+<span id="more"></span>
+
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>传统 RAG 的典型流程是：</p>
+<ol>
+<li>把资料切成 chunk。</li>
+<li>对 chunk 做 embedding。</li>
+<li>存到向量库。</li>
+<li>用户提问时先召回相似片段。</li>
+<li>再把片段塞给模型生成回答。</li>
+</ol>
+<p>这个流程在知识库问答里很常见，但放到代码库里会遇到几个问题：</p>
+<ul>
+<li>代码变化很快，索引很容易过期。</li>
+<li>chunk 切分可能破坏函数、类、调用链的完整语义。</li>
+<li>向量相似度不一定能准确命中真实入口。</li>
+<li>检索出来的内容仍然需要模型继续判断是否相关。</li>
+</ul>
+<p>而 Claude Code 这类工具更像一个会使用命令行的程序员：先看目录，再用关键词搜索，再读文件，再顺着调用关系继续追。它不是一次性“召回答案”，而是边查边缩小范围。</p>
+<h2 id="为什么代码库适合-grep"><a href="#为什么代码库适合-grep" class="headerlink" title="为什么代码库适合 grep"></a>为什么代码库适合 grep</h2><p>代码和普通自然语言文档不一样。</p>
+<p>普通文档里，同一个意思可能有很多说法。比如“登录失败”“认证异常”“账号校验不通过”可能指向同一类问题。这个时候，embedding 的语义相似度有价值。</p>
+<p>但代码里有大量明确锚点：</p>
+<ul>
+<li>文件名</li>
+<li>函数名</li>
+<li>类名</li>
+<li>变量名</li>
+<li>API 路径</li>
+<li>错误信息</li>
+<li>配置项</li>
+<li>日志关键字</li>
+</ul>
+<p>这些东西本来就是程序员为了可维护性留下的索引。你要找 <code>login failed</code>，直接搜错误字符串；你要找接口处理逻辑，搜路由；你要找某个配置怎么生效，搜配置 key。很多时候，字面搜索已经足够精确。</p>
+<p>所以对代码库来说，真正重要的不是“有没有一个向量库”，而是模型能不能提出好搜索词，并且能不能根据搜索结果继续追踪上下文。</p>
+<h2 id="Agentic-Search-和传统-RAG-的差别"><a href="#Agentic-Search-和传统-RAG-的差别" class="headerlink" title="Agentic Search 和传统 RAG 的差别"></a>Agentic Search 和传统 RAG 的差别</h2><p>我觉得文章里最关键的点是：Claude Code 的检索不是一次性的，而是 agentic search。</p>
+<p>传统 RAG 更像：</p>
+<blockquote>
+<p>先把可能相关的资料找出来，再回答。</p>
+</blockquote>
+<p>Agentic search 更像：</p>
+<blockquote>
+<p>先提出一个搜索假设，执行搜索，阅读结果，再决定下一步查哪里。</p>
+</blockquote>
+<p>这个过程更接近真实开发者的工作方式：</p>
+<ol>
+<li>先用 <code>rg</code> 搜一个关键字。</li>
+<li>看命中的文件名和上下文。</li>
+<li>判断哪个文件像入口。</li>
+<li>打开文件读实现。</li>
+<li>顺着 import、调用链、类型定义继续查。</li>
+<li>最后形成对问题的判断。</li>
+</ol>
+<p>这种方式的优势是实时、可解释、成本低。它不需要提前维护索引，也不会因为代码刚改完但向量库没更新而查到旧内容。</p>
+<h2 id="但这不是说-RAG-已死"><a href="#但这不是说-RAG-已死" class="headerlink" title="但这不是说 RAG 已死"></a>但这不是说 RAG 已死</h2><p>标题里的“RAG 已死”更像是一种问题意识，不应该理解成绝对结论。</p>
+<p>RAG 仍然有适用场景：</p>
+<ul>
+<li>大量自然语言文档检索。</li>
+<li>用户问题和原文用词差异很大。</li>
+<li>需要跨文档语义归纳。</li>
+<li>资料更新频率较低，可以接受提前建索引。</li>
+<li>需要在海量资料中做粗召回。</li>
+</ul>
+<p>代码库检索只是一个特殊场景。它的特点是结构强、命名密集、变更频繁、局部上下文重要。因此，对它来说，轻量的本地搜索经常比重型 RAG 更实用。</p>
+<p>更准确的说法应该是：RAG 不是死了，而是不能无脑套到所有检索问题上。</p>
+<h2 id="对我写代码的启发"><a href="#对我写代码的启发" class="headerlink" title="对我写代码的启发"></a>对我写代码的启发</h2><p>这篇文章给我的启发是：做 AI 工具时，不要一上来就默认“需要向量数据库”。</p>
+<p>应该先问几个更底层的问题：</p>
+<ul>
+<li>数据是不是天然有明确关键词？</li>
+<li>数据是不是变化非常频繁？</li>
+<li>用户的问题是否能转成精确搜索条件？</li>
+<li>检索结果是否需要可解释路径？</li>
+<li>维护索引的成本是否高于收益？</li>
+</ul>
+<p>如果答案偏向“是”，那 <code>grep/ripgrep + 文件读取 + 多轮推理</code> 可能就是更合适的第一版方案。</p>
+<p>尤其在编程 Agent 里，工具调用能力比单纯 embedding 更关键。模型真正需要的不是一次性拿到一堆“看起来相似”的片段，而是像开发者一样，有能力逐步定位、验证、排除和追踪。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>这篇文章的价值不在于证明 RAG 没用了，而在于提醒我们：检索方案要服务于数据形态。</p>
+<p>自然语言知识库适合语义召回，代码库则天然适合精确搜索和上下文追踪。Claude Code 选择 grep&#x2F;ripgrep，并不是技术倒退，而是回到了一个很朴素的工程判断：能用简单、实时、可解释的方法解决问题，就不要先引入复杂系统。</p>
+<p>对代码检索来说，最强的方案未必是“向量库优先”，而是“让模型学会像工程师一样搜索”。</p>
+]]></content>
+      <categories>
+        <category>AI</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+        <tag>RAG</tag>
+        <tag>Claude Code</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>一个流水水水水账</title>
+    <url>/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/</url>
+    <content><![CDATA[<p>在飞机上不知道干什么，忽然想起来自己之前嚷嚷着要写一下大作文，因为自己两星期之后就21岁了，却还没有象征性得写过阶段性大作文</p>
+<p>既然写自传文章，那我还是从最近发生的开始写吧，因为过去的事情大多我已记不太清了，所以有些地方写的简略一点在所难免</p>
+<p>就从打重庆开始说起吧，其实我本来是没有想过打重庆的，因为毕竟太远了，加上也没怎么训练实力也就铁牌，所以意愿不高，当然当时想着可以在南昌这种近的地方打星去感受一下热爱的感觉，由于种种因素没有去成，赛时姑且认为负贡献吧，就写了一个签到还wa了一发，当时石头人让我上机写，脑子直接糊成一坨浆糊，重新整理一下就好了，但还是wa了一发，OK这之后就没有我的事了，整个人有点懵，看着白熊跟石头人说说笑笑，我也跟着笑，然后他们就过题了😁，说到重庆，吃了不挂科火锅，我甚至没意识到不挂科是名字，吃了两口简直辣到发昏，已经说不出来话了，也是成功完成喷射任务了，也是面基了长相，说实话我都没想到说那么s的话，长的那么老实，甚至吃完火锅马上就回去打开cf，写他的dsu on tree（正赛还想看我板子有没有，但我没点这个科技树😂），还是有点感慨的，因为自己也没有一个人出远门，以往都是有搭子或者有人陪着，住酒店啊，比赛座位啊，都不用我操心，我就跟着后面指哪走哪就好了。（这飞机真热啊没开空调吗），比赛也说完了那就开始说找实习吧</p>
+<p>其实找实习我到现在都感觉有点魔幻，当初看学长用go开发于是我all in go（学院本写go谁找工作谁知道），但我完全不懂什么开发路线，也不知道该做什么项目，最开始的时候，连语法也是跟着敲，后来就纯codex了，我也不知道到底有没有学到东西，反正感觉做了很多错误的选择，浪费了太多时间，不过既然已经做出了选择就不必后悔哎哎，然后就是背八股，三四月份群友已经开始面试的时候，我还在过小林的八股，我也是愣头青，硬生生把整个小林八股都过了一遍，但后来面试了十家发现用的不太多，也不怎么深，也没有必要，想要人的公司不会这么恶心你的，在6月中旬也是找到了第一份实习，在下周一入职，但是学校的操作懂得都懂，现在想起来感觉很突然，我以为我找不到工作了，于是我买了大学里面的第一个显示屏，之前一直蹭室友校园网，也续费了一个月，甚至在xhs发什么of大楼都来了，周三的两场面试我也没报希望，因为问的都很简单，也没有什么难度，基本就是背一下就好了，谁曾想就这么过了，而且同一天过了两，一下子选择纠结症也犯了，而且还要考虑租房等等杂事，天呐学校能给我直接及格吗，我不要上课了！虽然是小厂实习，但我已经非常心满意足了，或许这就是当下最好的结果吧</p>
+<p>找工作的时候每天都很焦虑，在最开始不了解行情，甚至抱有进入大厂的期待，每天就硬背八股，看各种开发视频，但是整个金三银四都没有面试，那时候我在想，我这辈子真完了，连个实习都找不到，截至目前我已经投了1.5k简历才找到第一份实习，我自认为这里面是有运气成分在的，在收到of那天我很开心忘乎所以，虽然是迷你厂，但至少有了盼头，不至于堕落，我还记得凌晨三点睡不着因为找不到工作，只能一遍遍看着官网的动态，还有boss上的各种jd，我在思考这一切是不是没有意义，现在的我也不知道答案</p>
+<p>当初打a呢，是因为学长在群里宣传，能找到工作，因为我是一个半努力的人，喜欢有人带着我走，所以我开始学cpp，看董晓，然而并没什么用，有天赋的人怎么样都是厉害的，也是留在队里面当吊车尾，平日里活跃下气氛得了，打a生涯也没什么记得太深的事情了，如果你一定要选出一个的话，那就是经典省赛铁第二名吧，当时差了11分钟太可惜太懊悔了，自己没复制样例wa了一发太致命了，以至于后面一个月都不想打a了，因为也比较害怕，但自己又没有那么大的决心，所以依旧浑水摸鱼，事实上杭电牛客多校，补题真的补不过来啊，周末还要abc cf😇，但不得不打，导致很多题没补，就一下子到区域赛了，区域赛也是天降两个银牌学长带领我拿到了的人生的第一个铜（是他们的第一个也是我的第一个），算了这段还是skip了。第一次cf上蓝名，第一次ak牛客周赛的时候，我很开心，但我看着过去的qq空间，我已不知那是什么滋味了。区域赛打完就转开发了，但我真的转了吗，实则在做无用功</p>
+<p>可能写完大学了，我在大学里面也时常回想起高中，现在唯一的感受就是，真的回不去了，其实过去我一直安慰自己高考是正常发挥，但是后来某个机缘巧合发现自己考的是真烂啊，跟中考一样烂到没边，所以我一直都不想考研，一直害怕再次失败，直到开始找工作了才发现，其实那二三十分真的不重要，事实上nobody cares，甚至不如降几分去大学后缀，或许收益反而比那点分重要的多，以及就是针对专业选城市，如果有机会我就穿越到过去狠狠地告诉自己千万要根据专业选城市啊，还有一定降分去大学后缀，但没事我已坦然接受我现在的一切，包括我这确实相比于很多人平庸的人生。哎哎我应该说高中的事情的，当时我高中只记得屎尿屁那点事了，以及一些让人作呕和青春懵懂无法挽回的事吧。感觉还是因为没有开智的原因，没有意识到学业，家庭，爱情的权衡。skip…. 真的不太记得初高中的事情了，有的都是负能量</p>
+<p>思来想去最近这几年做了什么，其实感觉好像也没做太多有意义的事情，可能就记得当初五个小时环东钱湖走了一圈，可能就记得骑了几个小时，帝王超长下坡，好像大学里面没有太多令人激动的时刻，lpl全华夺冠，自己做出来的顽强拼搏，谈一次恋爱，又或者学一个什么像样的技术，一个都没有，大学确实要碌碌无为的过去了 自由或是枷锁我看不明白 也不必在看了</p>
+<p>其实我应该写一下初高中的做题经历的，因为写作文嘛，总是要带点正能量，小升初的时候，我印象最深的是第一次考试，那会儿直接考了个倒数，大概就是职校都不见得上的了，回去告诉爸妈好像也没什么反应，就这样按部就班得赫赫学了一个学期，我非常讨厌所谓的补习班，觉得没什么用，也觉得是浪费钱，学了一个学期，说到这我想起来我的班长同桌，有点感慨毕竟大半时间都是同桌，只记得有对不起她的事情，但是是什么事情我却也忘记掉了，只记得每天都是做题区单方面菜头哈哈，但周考考了180名却还是她第一个兴致冲冲的告诉我的，所以在我眼中她还是一个好形象，即便每天吵吵闹闹。回归正题，那次期末考试我考了260名，再高一点就可以上普高了，我当然非常高兴，然后就是疫情，懵懵的上了排名倒一的普高，我没有想过成绩在稳步提升的情况下，在疫情那几个月掉了一大截，不过上了普高也还能接受，中考的前几个月还吹嘘自己能上更好的，然而打脸就是这么疼，也觉得自己还有无限机会，大不了在高中发光发热，当然我也忘不了初中部分老师区别对待，带头容貌攻击，不过大家一致认为那人就是个更年期到了的老太婆哈哈，还有的老师明摆的要钱真是吃相难看啊。。。我已记不得很多同学的名字，我在想或许也有很多同学记不得我的名字了，岁月蹉跎，不忍回看，我常常觉得时间总是太快，曾经或许下过许多承诺，也早就一一忘记了，我真的记不清很多东西了，或许是因为这段时间找工作压力太大了，不过现在我又想起来，初三的同桌，虽然我家里以前是开小卖部的，但是老爸不让我吃所谓的垃圾食品，但是我的两个同桌总会给我投喂，也度过了很快乐的时光</p>
+<p>高中可能要讲的就是初恋了，当时可能觉得被绿了，非常愤怒，但现在长大了，发现其实我的问题也不少（虽然我还是不能容忍被绿！）不如直接说分手！为什么谈上也非常奇葩，当时可能是跨年，我得到来之不易的lol时间（现在我已经是11年老玩家了），有个女生问我跨年有没有人陪，那会儿b站都是直接表白让人跑的烂梗，我也不知道是抱着猎奇的心理还是基于什么的心理，光速表白了，我是没想到对面同意了，这时候就骑虎南下了，然后就是几个月冷淡了，但我无所谓了，没多久就是高二了，说起来我连高一都忘记很多人了，不过我记得我高中的时候非常豪，做题做到发狂了，直接就是极意豪的状态。高中那就不得不谈谈背刺的事情了，假设一个男叫科比，女的叫冰红茶，我就叫哈灯好了，那会儿科比总是在我面前说冰红茶的坏话，出于热情，我让他删除冰红茶的联系方式，并且不要管她，跟老师申请换位置，大概就是这样几个星期，出于表率，我把冰红茶删了，并换位置了，然后当天科比就跟冰红茶在一起了，嘿嘿，你们懂我心里的难过吗，这麻包东西真键啊，据我听说（我大概收集了一些信息），大概就是把我劝科比删冰红茶的聊天记录恶意剪辑去讨好冰红茶，我说白了真是神人了。然后还有什么，感觉现在跟同学联系都是dy还有游戏了，别的基本没有主动联系过，哎哎也有部分原因是我在打a吧。高中的主旋律还是做题，但关于做题的节点或者里程碑事件，我好像完全依旧想不起来了</p>
+<p>xcpc是一场骗局吗，我觉得是，而且不单单是xcpc，任何对于目标没有用或者是低收益的事情都是骗局，我相信呆在xcpc的同学朋友们都是为了热爱。</p>
+<h2 id="忘记上面那段后面要写什么了，实在是坐飞机太累了回去就睡了，现在接着写"><a href="#忘记上面那段后面要写什么了，实在是坐飞机太累了回去就睡了，现在接着写" class="headerlink" title="忘记上面那段后面要写什么了，实在是坐飞机太累了回去就睡了，现在接着写"></a>忘记上面那段后面要写什么了，实在是坐飞机太累了回去就睡了，现在接着写</h2><p>与我而言，acm的过程是非常梦幻的，让我认识了来自天南海北的朋友，感受不同人的性格、喜好，所以你问我acm是不是一场骗局已经不重要了，至少当下我认识的这些人 每天互相分享各种喜怒哀乐这就足够了，我总是觉得自己运气不好，在一些事情上总是很倒霉，但实际上我很幸运，在整个人生的过程，总有人带着我走，总有人时刻提醒我，我应该做什么，应该怎么做，所以结局已经不重要了，我还是更愿意相信大家都有更美好的未来</p>
+<p>充满鲜花的世界到底在哪里</p>
+]]></content>
+      <categories>
+        <category>随笔</category>
+      </categories>
+      <tags>
+        <tag>随笔</tag>
+        <tag>生活</tag>
+        <tag>ACM</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>中文分词-最大匹配算法</title>
+    <url>/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h1 id="1-最大匹配算法"><a href="#1-最大匹配算法" class="headerlink" title="1. 最大匹配算法"></a>1. 最大匹配算法</h1><p>最大匹配法是指通过词典进行单向分词，优先选择词的长度，逐步对句子扫描分词</p>
+<p>我们举个从左向右的例子</p>
+<span id="more"></span>
+
+<div class="code-container" data-rel="Plaintext"><figure class="iseeu highlight plaintext"><table><tr><td class="code"><pre><span class="line">假设当前句子为：  你学会最大匹配算法了吗 </span><br><span class="line">词典当中有 你 学会 学 会 最大匹配算法 了 吗(其实还有最大 匹配等等就不写了)</span><br><span class="line"></span><br><span class="line">第一次分词   | 你学会最大匹配算法了吗</span><br><span class="line">你学会最大匹配算法了吗  没有这个词</span><br><span class="line">你学会最大匹配算法了  没有这个词</span><br><span class="line">你学会最大匹配算法  没有这个词</span><br><span class="line">你学会最大匹配算  没有这个词</span><br><span class="line">...</span><br><span class="line">你 对咯 那就下一个</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">第二次分词   | 学会最大匹配算法了吗</span><br><span class="line">显然结果是   学会</span><br><span class="line"></span><br><span class="line">第三次分词   | 最大匹配算法了吗 </span><br><span class="line">这里就有个问题 选择 最大匹配算法 还是 最大|匹配|算法</span><br><span class="line">我们首先要考虑的肯定是词的长度越长越好 词典之中已经拥有显著的意义就没必要在分词</span><br><span class="line">所以选择 最大匹配算法</span><br></pre></td></tr></table></figure></div>
+
+
+<p>最大匹配法主要包括正向最大匹配法（FMM，刚刚这个例子就是）、反向最大匹配法（BMM）和双向最大匹配法，均是基于词典的</p>
+<p>缺点有：</p>
+<p>因为是基于词典的 所以如果新词没记录没更新，就会识别不出来</p>
+<h1 id="2-正向匹配算法-FMM"><a href="#2-正向匹配算法-FMM" class="headerlink" title="2. 正向匹配算法(FMM)"></a>2. 正向匹配算法(FMM)</h1><p>也就是我刚刚上面提到的  你学会最大匹配算法了吗</p>
+<p>分词为  你|学会|最大匹配算法|了吗</p>
+<p>下面是cpp简易的代码</p>
+<div class="code-container" data-rel="Cpp"><figure class="iseeu highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">clearlove13</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::unordered_set&lt;std::string&gt; dict = &#123;</span><br><span class="line">        <span class="string">&quot;你&quot;</span>,</span><br><span class="line">        <span class="string">&quot;学会&quot;</span>,</span><br><span class="line">        <span class="string">&quot;最大匹配算法&quot;</span>,</span><br><span class="line">        <span class="string">&quot;了吗&quot;</span>&#125;;</span><br><span class="line">    <span class="comment">//当作词典</span></span><br><span class="line">    std::string s = <span class="string">&quot;你学会最大匹配算法了吗&quot;</span>;</span><br><span class="line">    <span class="type">int</span> mx = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;w : dict) &#123;</span><br><span class="line">        mx = std::<span class="built_in">max</span>(mx, (<span class="type">int</span>)w.<span class="built_in">size</span>());</span><br><span class="line">    &#125;</span><br><span class="line">    std::vector&lt;std::string&gt; res;</span><br><span class="line">    <span class="type">int</span> n = s.<span class="built_in">size</span>();</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n;) &#123;</span><br><span class="line">        <span class="type">int</span> len = std::<span class="built_in">min</span>(mx, n - i);</span><br><span class="line">        <span class="type">bool</span> ok = <span class="literal">false</span>;</span><br><span class="line">        <span class="comment">//逐长度查询</span></span><br><span class="line">        <span class="keyword">while</span> (len) &#123;</span><br><span class="line">            std::string cur = s.<span class="built_in">substr</span>(i, len);</span><br><span class="line">            <span class="keyword">if</span> (dict.<span class="built_in">count</span>(cur)) &#123;</span><br><span class="line">                res.<span class="built_in">push_back</span>(cur);</span><br><span class="line">                i += len;</span><br><span class="line">                ok = <span class="literal">true</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            len--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!ok) &#123;</span><br><span class="line">            res.<span class="built_in">push_back</span>(s.<span class="built_in">substr</span>(i, <span class="number">1</span>));</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;x : res) &#123;</span><br><span class="line">        std::cout &lt;&lt; x &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>但是呢 我们可以考虑优化 譬如说将dict按照长度在进行分层 大致如下</p>
+<div class="code-container" data-rel="Cpp"><figure class="iseeu highlight cpp"><table><tr><td class="code"><pre><span class="line">std::vector&lt;std::unordered_set&lt;std::string&gt;&gt; <span class="built_in">dict</span>(max_len + <span class="number">1</span>);</span><br><span class="line">dict[<span class="number">1</span>].<span class="built_in">insert</span>(<span class="string">&quot;你&quot;</span>);</span><br><span class="line">dict[<span class="number">2</span>].<span class="built_in">insert</span>(<span class="string">&quot;学会&quot;</span>);</span><br><span class="line">dict[<span class="number">2</span>].<span class="built_in">insert</span>(<span class="string">&quot;了吗&quot;</span>);</span><br><span class="line">dict[<span class="number">6</span>].<span class="built_in">insert</span>(<span class="string">&quot;最大匹配算法&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">或者说 我们可以考虑引入字典树 在对比的时候直接省去查询的性能 甚至于占用的内存也没有多大 再去用BFS去找到对应的集合</span><br></pre></td></tr></table></figure></div>
+
+
+<img src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/image-20260604222136798.png" class="">
+
+<p>输出结果就这样</p>
+<h1 id="3-反向匹配算法-BMM-以及双向匹配算法"><a href="#3-反向匹配算法-BMM-以及双向匹配算法" class="headerlink" title="3. 反向匹配算法(BMM)以及双向匹配算法"></a>3. 反向匹配算法(BMM)以及双向匹配算法</h1><p>BMM就是相当于把FMM倒过来做一遍</p>
+<p>而双向匹配算法则是比较FMM跟BMM 并选用两个标准</p>
+<p>（1）首先看两种方法结果的分词数，分词数越少越好；</p>
+<p>（2）分词数相同的情况下，看单个词的数量，越少越好；</p>
+<div class="code-container" data-rel="Cpp"><figure class="iseeu highlight cpp"><table><tr><td class="code"><pre><span class="line"><span class="function">std::vector&lt;std::string&gt; <span class="title">fmm</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    std::string &amp;s,</span></span></span><br><span class="line"><span class="params"><span class="function">    std::unordered_set&lt;std::string&gt; &amp;dict,</span></span></span><br><span class="line"><span class="params"><span class="function">    <span class="type">int</span> mx)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::vector&lt;std::string&gt; res;</span><br><span class="line">    <span class="type">int</span> n = s.<span class="built_in">size</span>();</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n;) &#123;</span><br><span class="line">        <span class="type">int</span> len = std::<span class="built_in">min</span>(mx, n - i);</span><br><span class="line">        <span class="type">bool</span> ok = <span class="literal">false</span>;</span><br><span class="line">        <span class="keyword">while</span> (len) &#123;</span><br><span class="line">            std::string cur = s.<span class="built_in">substr</span>(i, len);</span><br><span class="line">            <span class="keyword">if</span> (dict.<span class="built_in">count</span>(cur)) &#123;</span><br><span class="line">                res.<span class="built_in">push_back</span>(cur);</span><br><span class="line">                i += len;</span><br><span class="line">                ok = <span class="literal">true</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            len--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!ok) &#123;</span><br><span class="line">            res.<span class="built_in">push_back</span>(s.<span class="built_in">substr</span>(i, <span class="number">1</span>));</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> res;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">std::vector&lt;std::string&gt; <span class="title">bmm</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    std::string &amp;s,</span></span></span><br><span class="line"><span class="params"><span class="function">    std::unordered_set&lt;std::string&gt; &amp;dict,</span></span></span><br><span class="line"><span class="params"><span class="function">    <span class="type">int</span> mx)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::vector&lt;std::string&gt; res;</span><br><span class="line">    <span class="type">int</span> i = (<span class="type">int</span>)s.<span class="built_in">size</span>() - <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">while</span> (i &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">int</span> len = std::<span class="built_in">min</span>(mx, i + <span class="number">1</span>);</span><br><span class="line">        <span class="type">bool</span> ok = <span class="literal">false</span>;</span><br><span class="line">        <span class="keyword">while</span> (len) &#123;</span><br><span class="line">            std::string cur = s.<span class="built_in">substr</span>(i - len + <span class="number">1</span>, len);</span><br><span class="line">            <span class="keyword">if</span> (dict.<span class="built_in">count</span>(cur)) &#123;</span><br><span class="line">                res.<span class="built_in">push_back</span>(cur);</span><br><span class="line">                i -= len;</span><br><span class="line">                ok = <span class="literal">true</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            len--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!ok) &#123;</span><br><span class="line">            res.<span class="built_in">push_back</span>(s.<span class="built_in">substr</span>(i, <span class="number">1</span>));</span><br><span class="line">            i--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    std::<span class="built_in">reverse</span>(res.<span class="built_in">begin</span>(), res.<span class="built_in">end</span>());</span><br><span class="line">    <span class="keyword">return</span> res;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//单个字符个数</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">count_single</span><span class="params">(<span class="type">const</span> std::vector&lt;std::string&gt; &amp;v)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="type">int</span> res = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;s : v) &#123;</span><br><span class="line">        <span class="keyword">if</span> (s.<span class="built_in">size</span>() == <span class="number">1</span>) &#123;</span><br><span class="line">            res++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> res;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">std::vector&lt;std::string&gt; <span class="title">bidirectional</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    std::vector&lt;std::string&gt; &amp;f,</span></span></span><br><span class="line"><span class="params"><span class="function">    std::vector&lt;std::string&gt; &amp;b)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (f.<span class="built_in">size</span>() &lt; b.<span class="built_in">size</span>()) &#123;</span><br><span class="line">        <span class="keyword">return</span> f;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (b.<span class="built_in">size</span>() &lt; f.<span class="built_in">size</span>()) &#123;</span><br><span class="line">        <span class="keyword">return</span> b;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="type">int</span> sf = <span class="built_in">count_single</span>(f);</span><br><span class="line">    <span class="type">int</span> sb = <span class="built_in">count_single</span>(b);</span><br><span class="line">    <span class="keyword">if</span> (sf &lt; sb) &#123;</span><br><span class="line">        <span class="keyword">return</span> f;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (sb &lt; sf) &#123;</span><br><span class="line">        <span class="keyword">return</span> b;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> f;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">clearlove13</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    std::unordered_set&lt;std::string&gt; dict = &#123;</span><br><span class="line">        <span class="string">&quot;研究&quot;</span>,</span><br><span class="line">        <span class="string">&quot;研究生&quot;</span>,</span><br><span class="line">        <span class="string">&quot;生命&quot;</span>,</span><br><span class="line">        <span class="string">&quot;命&quot;</span>,</span><br><span class="line">        <span class="string">&quot;起源&quot;</span>&#125;;</span><br><span class="line"></span><br><span class="line">    std::string s = <span class="string">&quot;研究生命起源&quot;</span>;</span><br><span class="line">    <span class="type">int</span> mx = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;w : dict) &#123;</span><br><span class="line">        mx = std::<span class="built_in">max</span>(mx, (<span class="type">int</span>)w.<span class="built_in">size</span>());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">auto</span> f = <span class="built_in">fmm</span>(s, dict, mx);</span><br><span class="line">    <span class="keyword">auto</span> b = <span class="built_in">bmm</span>(s, dict, mx);</span><br><span class="line">    <span class="keyword">auto</span> ans = <span class="built_in">bidirectional</span>(f, b);</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;FMM:\n&quot;</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;x : f) &#123;</span><br><span class="line">        std::cout &lt;&lt; x &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;BMM:\n&quot;</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;x : b) &#123;</span><br><span class="line">        std::cout &lt;&lt; x &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;BiMM:\n&quot;</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;x : ans) &#123;</span><br><span class="line">        std::cout &lt;&lt; x &lt;&lt; <span class="string">&#x27;\n&#x27;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
+
+<img src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/image-20260604224717441.png" class="">
+
+<p>结果如此</p>
+<h1 id="4-小结"><a href="#4-小结" class="headerlink" title="4. 小结"></a>4. 小结</h1><p>可以看到在第三节双向匹配的效果不一定比单向匹配好 一方面是因为这个数据小 还有就是正如我们上面所说的词典不完善</p>
+<p>我们也可以通过一些数据结构去优化查询性能</p>
+]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>C++</tag>
+        <tag>中文分词</tag>
+        <tag>最大匹配算法</tag>
+        <tag>NLP</tag>
+      </tags>
+  </entry>
+</search>

@@ -1,0 +1,396 @@
+/* Redefine compatibility & custom standalone page styles */
+
+/* 1. Hide legacy Butterfly HTML timeline on /talking/ since Redefine natively renders source/_data/essays.yml */
+.page-template-content .talking-timeline,
+.page-template-content .messageboard-actions,
+.page-template-content h2#说说 {
+  display: none;
+}
+
+/* 2. Gallery grid styling (/gallery/) */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin: 24px 0 12px;
+}
+.gallery-card {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--background-color);
+}
+.gallery-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+.gallery-card figcaption {
+  padding: 10px 14px;
+  color: var(--third-text-color);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 3. Dark-mode adaptation for bilingual translation post (#article-container) under Redefine's html.dark */
+html.dark #article-container {
+  --am-ink: #d4dce2;
+  --am-mist: #8b9ca6;
+  --am-green: #4ade80;
+  --am-rule: rgba(217, 224, 228, 0.24);
+  --am-plate: rgba(217, 224, 228, 0.16);
+}
+
+/* 右下角常驻书本按钮（挂在可见工具列表，随主题工具栏样式走） */
+.yyq-read-tool .right-bottom-tools {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--default-text-color);
+}
+.yyq-read-controls {
+  position: fixed;
+  z-index: 100;
+  top: 88px;
+  right: 16px;
+  display: none;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--background-color);
+  box-shadow: 0 4px 16px #00000012;
+}
+.yyq-read-controls button {
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.yyq-read-entry:hover,
+.yyq-read-entry:focus-visible,
+.yyq-read-controls button:hover,
+.yyq-read-controls button:focus-visible {
+  background: var(--primary-color);
+  color: #fff;
+}
+body.read-mode .yyq-read-controls {
+  display: flex;
+}
+body.read-mode {
+  --yyq-reading-paper: #faf9f5;
+  --yyq-reading-ink: #191917;
+  --yyq-reading-muted: #595850;
+  background: var(--yyq-reading-paper);
+}
+/* 阅读模式深色与全站深色统一：直接取主题变量，主题改色自动跟随 */
+html.dark body.read-mode {
+  --yyq-reading-paper: var(--background-color, #202124);
+  --yyq-reading-ink: var(--default-text-color, #d8d5cc);
+  --yyq-reading-muted: var(--third-text-color, #aaa79e);
+}
+body.read-mode .page-container {
+  background: var(--yyq-reading-paper);
+}
+body.read-mode .navbar-container {
+  background: var(--yyq-reading-paper);
+  box-shadow: none;
+  border-bottom: 1px solid var(--border-color);
+}
+body.read-mode .article-content-container > :not(#article-container, .article-title, .article-header, .article-header-meta-info),
+body.read-mode .article-title > img,
+body.read-mode .article-header .avatar,
+body.read-mode .article-header .author,
+body.read-mode .article-meta-info :is(.article-tags, .article-wordcount, .article-min2read),
+body.read-mode .toc-content-container,
+body.read-mode .post-tools,
+body.read-mode .right-side-tools-container,
+body.read-mode .side-tools-container,
+body.read-mode .scroll-progress-bar,
+body.read-mode .main-content-footer {
+  display: none !important;
+}
+body.read-mode .main-content-body,
+body.read-mode .article-content-container {
+  padding: 0;
+}
+body.read-mode .main-content,
+body.read-mode .post-page-container .article-content-container {
+  width: 100% !important;
+  max-width: none !important;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+body.read-mode .article-title {
+  /* 收紧横幅时代的留白：仅保留避开固定导航栏（58px）+ 呼吸的空间 */
+  padding: 96px 20px 0;
+}
+body.read-mode .article-title > div {
+  position: static;
+  justify-content: center;
+  padding: 0;
+}
+body.read-mode .article-title h1 {
+  max-width: 900px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  color: var(--yyq-reading-ink);
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+}
+body.read-mode :is(.article-header, .article-header-meta-info) {
+  justify-content: center;
+  margin: 8px auto 0;
+  padding: 0 20px;
+  transform: none;
+  text-align: center;
+}
+body.read-mode .article-meta-info {
+  color: var(--yyq-reading-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+body.read-mode .article-meta-item {
+  white-space: nowrap;
+}
+body.read-mode #article-container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+  margin: 32px auto 0;
+  padding: 8px 20px 96px;
+  border: 0;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  font-size: 16.96px;
+  line-height: 1.65;
+  color: var(--yyq-reading-ink);
+}
+body.read-mode #article-container :is(p, li, h2) {
+  color: inherit;
+}
+body.read-mode #article-container p {
+  line-height: 1.65;
+}
+body.read-mode #article-container h2 {
+  padding: 0;
+  border-bottom: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 25.6px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+body.read-mode #article-container h2 .headerlink {
+  display: none;
+}
+body.read-mode #article-container img {
+  display: block;
+  width: min(92vw, 960px);
+  max-width: none;
+  margin: 3rem 0 3rem 50%;
+  transform: translateX(-50%);
+  border: none;
+}
+html.dark body.read-mode #article-container {
+  --am-ink: #d8d5cc;
+  --am-green: #63b394;
+}
+html.dark body.read-mode #article-container p.agent-memory-en {
+  color: rgba(216, 213, 204, 0.7);
+}
+@media (max-width: 640px) {
+  .yyq-read-controls {
+    top: 68px;
+    right: 8px;
+    max-width: calc(100vw - 16px);
+  }
+  body.read-mode .article-title {
+    padding-top: 88px;
+  }
+  body.read-mode #article-container {
+    width: calc(100% - 42px);
+    margin-top: 24px;
+  }
+}
+
+/* ===== 3D 词云球：/tags/ 与 /categories/ 共用（/js/tag-cloud.js）===== */
+#tag-sphere {
+  --ts-top: #d97706;
+  --ts-hot: #0f766e;
+  --ts-mid: #2a8f85;
+  --ts-low: #66736f;
+  position: relative;
+  height: clamp(300px, 44vw, 440px);
+  margin: 0 auto;
+  max-width: 100%;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+html.dark #tag-sphere {
+  --ts-top: #fbbf24;
+  --ts-hot: #5eead4;
+  --ts-mid: #2dd4bf;
+  --ts-low: #7d8f8a;
+}
+#tag-sphere a {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35em 0.5em;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+  will-change: transform, opacity;
+}
+#tag-sphere a.ts-top { color: var(--ts-top); }
+#tag-sphere a.ts-hot { color: var(--ts-hot); }
+#tag-sphere a.ts-mid { color: var(--ts-mid); }
+#tag-sphere a.ts-low { color: var(--ts-low); }
+#tag-sphere a:hover {
+  background: rgba(15, 118, 110, 0.1);
+}
+
+/* ===== 全局音乐播放器（/js/music-player.js，追梦赤子心）===== */
+#global-music-player.music-player {
+  position: fixed;
+  left: 18px;
+  bottom: 76px;
+  z-index: 99;
+}
+#global-music-player .music-player-cover {
+  position: relative;
+  display: block;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-color, #fff);
+  box-shadow: 0 14px 30px rgba(31, 41, 36, 0.18);
+  cursor: pointer;
+}
+#global-music-player .music-player-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#global-music-player .music-player-toggle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(15, 18, 16, 0.12), rgba(15, 18, 16, 0.48));
+  color: #fff;
+  font-size: 1rem;
+  opacity: 1;
+}
+#global-music-player.is-playing .music-player-toggle {
+  background: linear-gradient(180deg, rgba(15, 18, 16, 0.08), rgba(15, 18, 16, 0.38));
+}
+
+/* 徽章横排：主题 .markdown-body img:not(.not-markdown) 强制 block（特异度 0,2,1），
+   用同名 :not 抬到 0,2,4 反超，链接包裹的行内图（shields 徽章等）恢复行内 */
+.e-content p > a > img:not(.not-markdown),
+.article-content p > a > img:not(.not-markdown),
+.page-template-content p > a > img:not(.not-markdown) {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 阅读模式：代码块与图片同款出血加宽。
+   出血打在最外层 .code-container（语言标题栏是它的 ::before，跟着一起出血），
+   内层 .highlight-container 改为随父填满，不再单独位移 */
+body.read-mode #article-container .code-container {
+  display: block;
+  width: min(92vw, 960px);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+body.read-mode #article-container .highlight-container {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  transform: none;
+}
+/* 阅读模式：表格同款出血加宽（markdown 表格为裸 table，无包装层）。
+   必须保持 display: table —— display: block 会拆掉表格布局引擎，右侧列全空 */
+body.read-mode #article-container > table {
+  display: table;
+  width: min(92vw, 960px);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+/* 代码块内层表格（行号+代码）随容器拉满，否则 shrink-to-fit 留白右侧 */
+body.read-mode #article-container .highlight-container table {
+  width: 100%;
+}
+
+/* ===== 标签/分类页：整页 Linear 深色（html.dark 由 tag-cloud.js 强制） ===== */
+/* 全屏球幕：藏掉页面主内容与页脚（导航栏浮在画布上），禁止滚动 */
+body.yyq-orb-page {
+  overflow: hidden;
+}
+body.yyq-orb-page .main-content,
+body.yyq-orb-page footer,
+body.yyq-orb-page .main-content-footer {
+  display: none;
+}
+/* 去掉「标签」「分类」页面大标题，观星窗自己说话 */
+body.yyq-orb-page .page-title-header {
+  display: none;
+}
+/* 球幕页不显示音乐播放器与右下工具栏 */
+body.yyq-orb-page #global-music-player,
+body.yyq-orb-page .side-tools-container {
+  display: none;
+}
+/* 导航栏在球幕上的纯视觉暗色（作用域限定，不碰全站主题状态） */
+body.yyq-orb-page .navbar-container {
+  background: rgba(15, 16, 17, 0.72) !important;
+  box-shadow: none;
+}
+body.yyq-orb-page .navbar-container *:not(img):not(svg) {
+  color: #c9cdd4 !important;
+}
+
+/* 齿轮里 Redefine 自带的放大镜 +/− 撤掉：字号调节统一走阅读模式的 A+/A− */
+.side-tools-container .tool-font-adjust-plus,
+.side-tools-container .tool-font-adjust-minus {
+  display: none !important;
+}
+
+/* 文章顶部「阅读模式」入口已移除（入口收敛到右下角书本按钮），样式留存防回滚 */
+body.read-mode .yyq-read-entry {
+  display: none;
+}
+/* 进出标签页的明暗渐变：持久层（body/导航栏等跨 swup 存活）颜色过渡，
+   叠加 swup 自带的内容淡入，整体不突兀 */
+body,
+.navbar-container,
+.page-container,
+.main-content,
+.main-content-body,
+.main-content-footer,
+footer {
+  transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}

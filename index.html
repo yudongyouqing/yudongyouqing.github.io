@@ -1,316 +1,1981 @@
-<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Can you feel my world - 充满鲜花的世界到底在哪里</title><meta name="author" content="clearlove13"><meta name="copyright" content="clearlove13"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="如果他真的存在那么我一定会去">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Hexo Theme Redefine">
+    
+    
+    <meta name="author" content="clearlove13">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://yudongyouqing.github.io/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="Golang 后端开发 &#x2F; 技术爱好者 · 记录技术学习、调试经验和文档收藏">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Can you feel my world">
 <meta property="og:url" content="https://yudongyouqing.github.io/">
 <meta property="og:site_name" content="Can you feel my world">
-<meta property="og:description" content="如果他真的存在那么我一定会去">
+<meta property="og:description" content="Golang 后端开发 &#x2F; 技术爱好者 · 记录技术学习、调试经验和文档收藏">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://yudongyouqing.github.io/images/avatar.jpg">
+<meta property="og:image" content="https://yudongyouqing.github.io/images/home-sunset.jpg">
 <meta property="article:author" content="clearlove13">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://yudongyouqing.github.io/images/avatar.jpg"><script type="application/ld+json">{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "Can you feel my world",
-  "alternateName": [
-    "充满鲜花的世界到底在哪里",
-    "yudongyouqing.github.io"
-  ],
-  "url": "https://yudongyouqing.github.io/"
-}</script><link rel="shortcut icon" href="/images/avatar.jpg"><link rel="canonical" href="https://yudongyouqing.github.io/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
-    (() => {
-      
-    const saveToLocal = {
-      set: (key, value, ttl) => {
-        if (!ttl) return
-        const expiry = Date.now() + ttl * 86400000
-        localStorage.setItem(key, JSON.stringify({ value, expiry }))
-      },
-      get: key => {
-        const itemStr = localStorage.getItem(key)
-        if (!itemStr) return undefined
-        const { value, expiry } = JSON.parse(itemStr)
-        if (Date.now() > expiry) {
-          localStorage.removeItem(key)
-          return undefined
-        }
-        return value
-      }
-    }
-
-    window.btf = {
-      saveToLocal,
-      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = url
-        script.async = true
-        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
-        script.onload = script.onreadystatechange = () => {
-          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
-        }
-        script.onerror = reject
-        document.head.appendChild(script)
-      }),
-      getCSS: (url, id) => new Promise((resolve, reject) => {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = url
-        if (id) link.id = id
-        link.onload = link.onreadystatechange = () => {
-          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
-        }
-        link.onerror = reject
-        document.head.appendChild(link)
-      }),
-      addGlobalFn: (key, fn, name = false, parent = window) => {
-        if (!true && key.startsWith('pjax')) return
-        const globalFn = parent.globalFn || {}
-        globalFn[key] = globalFn[key] || {}
-        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
-        parent.globalFn = globalFn
-      }
-    }
-  
-      
-      const activateDarkMode = () => {
-        document.documentElement.setAttribute('data-theme', 'dark')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
-        }
-      }
-      const activateLightMode = () => {
-        document.documentElement.setAttribute('data-theme', 'light')
-        if (document.querySelector('meta[name="theme-color"]') !== null) {
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
-        }
-      }
-
-      btf.activateDarkMode = activateDarkMode
-      btf.activateLightMode = activateLightMode
-
-      const theme = saveToLocal.get('theme')
+<meta name="twitter:image" content="https://yudongyouqing.github.io/images/home-sunset.jpg">
     
-          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/avatar.jpg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/avatar.jpg">
+    <meta name="theme-color" content="#0F766E">
+    <link rel="shortcut icon" href="/images/avatar.jpg">
+    <!--- Page Info-->
+    
+    <title>
         
-      
-      const asideStatus = saveToLocal.get('aside-status')
-      if (asideStatus !== undefined) {
-        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
-      }
+            Can you feel my world - 充满鲜花的世界到底在哪里
+        
+    </title>
+
     
-      
-    const detectApple = () => {
-      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
-        document.documentElement.classList.add('apple')
-      }
-    }
-    detectApple()
-  
-    })()
-  </script><script>const GLOBAL_CONFIG = {
-  root: '/',
-  algolia: undefined,
-  localSearch: undefined,
-  translate: undefined,
-  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
-  copy: {
-    success: '复制成功',
-    error: '复制失败',
-    noSupport: '浏览器不支持'
-  },
-  relativeDate: {
-    homepage: false,
-    post: false
-  },
-  runtime: '',
-  dateSuffix: {
-    just: '刚刚',
-    min: '分钟前',
-    hour: '小时前',
-    day: '天前',
-    month: '个月前'
-  },
-  copyright: undefined,
-  lightbox: 'null',
-  Snackbar: undefined,
-  infinitegrid: {
-    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
-    buttonText: '加载更多'
-  },
-  isPhotoFigcaption: false,
-  islazyloadPlugin: false,
-  isAnchor: false,
-  percent: {
-    toc: true,
-    rightside: true,
-  },
-  autoDarkmode: false
-}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
-  title: 'Can you feel my world',
-  isHighlightShrink: false,
-  isToc: false,
-  pageType: 'home'
-}</script><link rel="stylesheet" href="/css/custom.css?v=20261113f"><meta name="generator" content="Hexo 8.1.1"><link rel="alternate" href="/atom.xml" title="Can you feel my world" type="application/atom+xml">
-</head><body><div class="bg-animation" id="web_bg" style="background-color: #f7f9fc;"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="full_page" id="page-header" style="background-image: url(/images/home-sunset.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Can you feel my world</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-layer-group"></i><span> 页面</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-comment-dots"></i><span> 说说</span></a></li><li><a class="site-page child" href="/gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comments"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div><div class="menus_item"><a class="site-page" href="/webdocs/"><i class="fa-fw fas fa-book"></i><span> 文档收藏</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="site-info"><h1 id="site-title">Can you feel my world</h1><div id="site-subtitle"><span id="subtitle"></span></div></div><div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div></header><main class="layout" id="content-inner"><div class="recent-posts nc" id="recent-posts"><div class="recent-post-items"><div class="recent-post-item"><div class="post_cover left"><a href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"><img class="post-bg" src="/2026/11/16/claude-memory-takeaways/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行">Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-11-16T01:24:01.000Z" title="发表于 2026-11-16 09:24:01">2026-11-16</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/AI/">AI</a></span></div><div class="content">Anthropic 十一月初发了一篇讲智能体记忆的文章，说了一件挺根本的事：Claude 要从经验里学习，就必须在不知道未来会发生什么的时候，先决定什么值得记住。全文翻译放在这里（双语对照，带原文全部引用链接）。 这篇不重复原文内容，只写我自己的三个收获和一个联想。都是我看完之后过了几天还留在脑子里的东西。   先说结论记忆系统的第一性问题不是”怎么存”，是”该记什么“。存的能力（文件夹、数据库、检索）早就过剩了，判断力才是稀缺的——判断哪些东西值得从日志里捞出来变成知识。整篇文章的所有实验，本质上都在测这个判断力。 1. 记什么，比怎么记重要：413 个文件输给 9 个文章里最狠的一组对比：让两个模型玩宝可梦，各自管自己的记忆文件夹。  Sonnet 3.7：什么都存，每场战斗、每件道具、每个 NPC 一个文件——225 个文件夹、413 个文件，拿了 1 枚徽章。到后期它一半的步数花在整理记忆而不是玩游戏上。 Fable 5：只存游戏没告诉它的东西——战术、计划、验证过的规则——9 个文件，4 枚徽章。  关键区别不是勤奋，是取舍。玩家有多少钱、站在地图哪里，屏幕上随时读得到...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"><img class="post-bg" src="/2026/10/20/goframe-indexed-array-binding/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-10-20T08:22:49.000Z" title="发表于 2026-10-20 16:22:49">2026-10-20</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Go/">Go</a></span></div><div class="content">同一个请求，PHP 侧筛选出 0 条，Go 侧返回 1 条。参数等于没传，而且接口不报错、日志无异常、返回 200。 这是我最近把一个 PHP(Laravel 6) 系统迁到 Go(GoFrame v2.10.0) 时遇到的真实分叉。排查到最后，我的结论是：GoFrame 对带索引数组参数（ids[0]=1&amp;ids[1]=2）是「半吊子支持」——解析层认了，结构体绑定层把它无声丢弃。这比完全不支持更坑，因为你能在 GetQueryMap() 里亲眼看到数据，却怎么都绑不进结构体字段。 这篇文章记录完整的三层排查、三形态实测数据和最终方案的取舍过程。   1. 联调分叉：计数 0 对 1先交代背景。PHP 的 query 解析器原生把 a[0]=1&amp;a[1]=2 解析成数组——这是历史包袱，也是事实标准。axios + qs 的默认配置 arrayFormat: &#39;indices&#39; 产出的正是这种形态，所以我们的存量前端流量全是它，线上跑了多年没出过问题。 迁移到 Go 之后，两端联调对照实测，分叉出现了：同一个带筛选的请求，PHP 侧按预期筛出 0...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南"><img class="post-bg" src="/2026/10/20/go-defer/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go 语言中的 defer：常见用法与避坑指南"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南">Go 语言中的 defer：常见用法与避坑指南</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-10-20T07:34:00.000Z" title="发表于 2026-10-20 15:34:00">2026-10-20</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Go/">Go</a></span></div><div class="content">写 Go 的人几乎每天都在用 defer：打开文件要 Close，加了锁要 Unlock，拿到 HTTP 响应要 Body.Close()。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 return 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。 本文先把 defer 的三条核心规则讲清楚，再过一遍高频用法，最后按「坑」逐条排查，每一条都配上可直接运行的最小示例。   1. defer 是什么defer 语句把一个函数调用推迟到当前函数返回之前执行。看一个最小示例： 123456789101112131415161718package mainimport (	&quot;fmt&quot;	&quot;os&quot;)func main() &#123;	f, err := os.Open(&quot;demo.txt&quot;)	if err != nil &#123;		fmt.Println(&quot;打开失败:&quot;, err)		return	&...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账"><img class="post-bg" src="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="一个流水水水水账"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账">一个流水水水水账</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-06-15T16:00:00.000Z" title="发表于 2026-06-16 00:00:00">2026-06-16</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a></span></div><div class="content">在飞机上不知道干什么，忽然想起来自己之前嚷嚷着要写一下大作文，因为自己两星期之后就21岁了，却还没有象征性得写过阶段性大作文 既然写自传文章，那我还是从最近发生的开始写吧，因为过去的事情大多我已记不太清了，所以有些地方写的简略一点在所难免 就从打重庆开始说起吧，其实我本来是没有想过打重庆的，因为毕竟太远了，加上也没怎么训练实力也就铁牌，所以意愿不高，当然当时想着可以在南昌这种近的地方打星去感受一下热爱的感觉，由于种种因素没有去成，赛时姑且认为负贡献吧，就写了一个签到还wa了一发，当时石头人让我上机写，脑子直接糊成一坨浆糊，重新整理一下就好了，但还是wa了一发，OK这之后就没有我的事了，整个人有点懵，看着白熊跟石头人说说笑笑，我也跟着笑，然后他们就过题了😁，说到重庆，吃了不挂科火锅，我甚至没意识到不挂科是名字，吃了两口简直辣到发昏，已经说不出来话了，也是成功完成喷射任务了，也是面基了长相，说实话我都没想到说那么s的话，长的那么老实，甚至吃完火锅马上就回去打开cf，写他的dsu on tree（正赛还想看我板子有没有，但我没点这个科技树😂），还是有点感慨的，因为自己也没有一个人出...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法"><img class="post-bg" src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="中文分词-最大匹配算法"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法">中文分词-最大匹配算法</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-06-04T13:31:33.000Z" title="发表于 2026-06-04 21:31:33">2026-06-04</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E7%AE%97%E6%B3%95/">算法</a></span></div><div class="content">1. 最大匹配算法最大匹配法是指通过词典进行单向分词，优先选择词的长度，逐步对句子扫描分词 我们举个从左向右的例子   12345678910111213141516171819假设当前句子为：  你学会最大匹配算法了吗 词典当中有 你 学会 学 会 最大匹配算法 了 吗(其实还有最大 匹配等等就不写了)第一次分词   | 你学会最大匹配算法了吗你学会最大匹配算法了吗  没有这个词你学会最大匹配算法了  没有这个词你学会最大匹配算法  没有这个词你学会最大匹配算  没有这个词...你 对咯 那就下一个第二次分词   | 学会最大匹配算法了吗显然结果是   学会第三次分词   | 最大匹配算法了吗 这里就有个问题 选择 最大匹配算法 还是 最大|匹配|算法我们首先要考虑的肯定是词的长度越长越好 词典之中已经拥有显著的意义就没必要在分词所以选择 最大匹配算法   最大匹配法主要包括正向最大匹配法（FMM，刚刚这个例子就是）、反向最大匹配法（BMM）和双向最大匹配法，均是基于词典的 缺点有： 因为是基于词典的 所以如果新词没记录没更新，就会识别不出来 2. 正向匹配算法(FMM)也就是...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统"><img class="post-bg" src="/2026/05/25/llm-wiki-agent-knowledge-layer/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/05/25/llm-wiki-agent-knowledge-layer/" title="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-05-25T06:42:31.000Z" title="发表于 2026-05-25 14:42:31">2026-05-25</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/AI/">AI</a></span></div><div class="content">原文链接：用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层 这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。   先说结论我理解这篇文章的重点有三个：  Agent 需要的不是一次性 RAG，而是长期可维护的知识层。 检索不应该只靠向量，grep + 向量 + 图谱扩展 可以互相补失败模式。 中文技术知识里，精确词、缩写、同义词和领域术语非常重要，不能盲目相信 embedding。  传统 RAG 更像“问一次，临时找资料，再回答”。LLM Wiki 的思路更像“先把知识编译成一个持续增长的代码库”。每次新增资料，不只是存进去，而是要抽取概念、建立链接、更新索引，让后续检索和推理都能复用这部分沉淀。 LLM Wiki 的关键变化Karpathy 的 LLM Wiki 有一个很有意思的比喻：  Obsidian 类似 IDE。 Wiki 类似代码库。 LLM 类似程序员。  ...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2026/05/25/rag-grep-claude-code/" title="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库"><img class="post-bg" src="/2026/05/25/rag-grep-claude-code/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/05/25/rag-grep-claude-code/" title="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-05-25T05:23:36.000Z" title="发表于 2026-05-25 13:23:36">2026-05-25</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/AI/">AI</a></span></div><div class="content">原文链接：RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归 这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？ 我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，LLM + grep/ripgrep + 文件读取 这种动态检索方式，很多时候比“提前切分、向量化、建索引”的传统 RAG 更直接。   先说结论传统 RAG 的典型流程是：  把资料切成 chunk。 对 chunk 做 embedding。 存到向量库。 用户提问时先召回相似片段。 再把片段塞给模型生成回答。  这个流程在知识库问答里很常见，但放到代码库里会遇到几个问题：  代码变化很快，索引很容易过期。 chunk 切分可能破坏函数、类、调用链的完整语义。 向量相似度不一定能准确命中真实入口。 检索出来的内容仍然需要模型继续判断是否相关。  而 Claude Code 这类工具更像一个会使用命令行的程序员：先看目录，再用关键词搜索，再读文件，再顺着调用关系继续...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2026/01/27/go-recover/" title="Go 里的 recover：如何优雅地兜底 panic（写给初学者）"><img class="post-bg" src="/2026/01/27/go-recover/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go 里的 recover：如何优雅地兜底 panic（写给初学者）"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/01/27/go-recover/" title="Go 里的 recover：如何优雅地兜底 panic（写给初学者）">Go 里的 recover：如何优雅地兜底 panic（写给初学者）</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-01-27T14:00:00.000Z" title="发表于 2026-01-27 22:00:00">2026-01-27</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Go/">Go</a></span></div><div class="content">很多 Go 初学者第一次遇到 panic 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：用 recover 可以救回来。 但 recover 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 panic / defer / recover 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。   1. panic &#x2F; defer &#x2F; recover 到底是什么关系？ panic  让当前 goroutine 进入异常流程：从当前函数开始向上“展开调用栈”（stack unwinding） 在展开过程中，会执行每一层函数里注册的 defer   defer  延迟执行：函数返回前执行 发生 panic 时也会执行（这是 recover 能工作的原因）   recover  作用：在 panic 发生后，把 panic 的值取出来，并阻止程序继续崩溃 只能在 defer 调用的函数里生效，否则返回 nil    一句话总结：panic 触发异常 -&gt; defer 仍会执行 -&gt; defer 里调用 recover...</div></div></div><div class="recent-post-item"><div class="post_cover left"><a href="/2026/01/23/go-context/" title="Go标准库中的context包"><img class="post-bg" src="/2026/01/23/go-context/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go标准库中的context包"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/01/23/go-context/" title="Go标准库中的context包">Go标准库中的context包</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-01-23T13:30:00.000Z" title="发表于 2026-01-23 21:30:00">2026-01-23</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Go/">Go</a></span></div><div class="content">本文总结了 Go 标准库中 context 的常见用法，包括创建、传递、取消、超时部分场景。   1.context包负责Go当中的上下文传递机制1.1 问题场景 一个 HTTP 请求可能启动多个 goroutine（调用下游服务、查数据库、写日志） 如果客户端断开连接，需要取消所有相关操作，避免浪费资源 如果某个操作超时，需要及时停止，而不是一直等待  1.2 传统方式的问题 没有统一的取消机制，每个 goroutine 需要自己管理停止逻辑 难以在调用链中传递取消信号  1.3 context 的价值 统一取消机制：一个 ctx.Done() 可以通知所有相关 goroutine 自动传播：子 context 会继承父 context 的取消状态 超时控制：可以设置超时时间，自动取消  2.context的接口实现1234567// 主要包含四个方法type Context interface &#123;  Deadline() (deadline time.Time, ok bool)  // 获取截止时间  Done() &lt;-chan struct&#123;&#...</div></div></div><div class="recent-post-item"><div class="post_cover right"><a href="/2026/01/22/debug-leetcode-auto-include/" title="调试 LeetCode 之 “一键补全头文件” 超简教程"><img class="post-bg" src="/2026/01/22/debug-leetcode-auto-include/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="调试 LeetCode 之 “一键补全头文件” 超简教程"></a></div><div class="recent-post-info"><a class="article-title" href="/2026/01/22/debug-leetcode-auto-include/" title="调试 LeetCode 之 “一键补全头文件” 超简教程">调试 LeetCode 之 “一键补全头文件” 超简教程</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2026-01-22T06:27:09.000Z" title="发表于 2026-01-22 14:27:09">2026-01-22</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%88%B7%E9%A2%98/">刷题</a></span></div><div class="content"> 本文 100% 亲测有效，3 步解决 #include &lt;bits&#x2F;stdc++.h&gt; 标红、commoncppproblem2.h 找不到等 IDE 烦恼。       ✨ 前置准备 安装 Leetcode   登录使用不多赘述。   下载「Debug LeetCode」插件   商店搜索 Debug LeetCode，点击 Install。   成功后会在侧边栏看到一个 💡 的 LeetCode 图标。     若你尚未配置本地 C&#x2F;C++ 环境，可参考 官方文档 进行 GCC&#x2F;Clang 安装与 C/C++ 扩展配置。   🚀 三步搞定自动补全头文件   步骤 操作 截图    Step&nbsp;1 打开任意 LeetCode 题目，点击顶部的 Debug 按钮    Step&nbsp;2 首次运行时插件会 自动生成 main.cpp，并把缺失的系统头文件一次性补齐    Step&nbsp;3 若仍出现 #include &quot;commoncppproblem2.h&quot; 的红色波浪线 —— 添加 inclu...</div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">clearlove13</div><div class="author-info-description">Golang 后端开发 / 技术爱好者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yudongyouqing"><i class="fab fa-github"></i><span>GitHub</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">记录技术学习、调试经验和文档收藏。</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"><img src="/2026/11/16/claude-memory-takeaways/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行"/></a><div class="content"><a class="title" href="/2026/11/16/claude-memory-takeaways/" title="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行">Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</a><time datetime="2026-11-16T01:24:01.000Z" title="发表于 2026-11-16 09:24:01">2026-11-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"><img src="/2026/10/20/goframe-indexed-array-binding/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持"/></a><div class="content"><a class="title" href="/2026/10/20/goframe-indexed-array-binding/" title="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</a><time datetime="2026-10-20T08:22:49.000Z" title="发表于 2026-10-20 16:22:49">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南"><img src="/2026/10/20/go-defer/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Go 语言中的 defer：常见用法与避坑指南"/></a><div class="content"><a class="title" href="/2026/10/20/go-defer/" title="Go 语言中的 defer：常见用法与避坑指南">Go 语言中的 defer：常见用法与避坑指南</a><time datetime="2026-10-20T07:34:00.000Z" title="发表于 2026-10-20 15:34:00">2026-10-20</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账"><img src="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="一个流水水水水账"/></a><div class="content"><a class="title" href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/" title="一个流水水水水账">一个流水水水水账</a><time datetime="2026-06-15T16:00:00.000Z" title="发表于 2026-06-16 00:00:00">2026-06-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法"><img src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/cover.webp" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="中文分词-最大匹配算法"/></a><div class="content"><a class="title" href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" title="中文分词-最大匹配算法">中文分词-最大匹配算法</a><time datetime="2026-06-04T13:31:33.000Z" title="发表于 2026-06-04 21:31:33">2026-06-04</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
-            <i class="fas fa-folder-open"></i>
-            <span>分类</span>
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+        
             
-          </div>
-          <ul class="card-category-list" id="aside-cat-list">
-            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/AI/"><span class="card-category-list-name">AI</span><span class="card-category-list-count">3</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Go/"><span class="card-category-list-name">Go</span><span class="card-category-list-count">4</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%88%B7%E9%A2%98/"><span class="card-category-list-name">刷题</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E7%AE%97%E6%B3%95/"><span class="card-category-list-name">算法</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E7%BF%BB%E8%AF%91/"><span class="card-category-list-name">翻译</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E9%9A%8F%E7%AC%94/"><span class="card-category-list-name">随笔</span><span class="card-category-list-count">1</span></a></li>
-          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/LeetCode/" style="font-size: 1.15em; color: rgb(189, 50, 77);">LeetCode</a><a href="/tags/VSCode/" style="font-size: 1.15em; color: rgb(104, 91, 155);">VSCode</a><a href="/tags/C/" style="font-size: 1.3em; color: rgb(107, 71, 50);">C++</a><a href="/tags/Go/" style="font-size: 1.45em; color: rgb(59, 50, 60);">Go</a><a href="/tags/defer/" style="font-size: 1.3em; color: rgb(50, 151, 116);">defer</a><a href="/tags/%E9%81%BF%E5%9D%91/" style="font-size: 1.15em; color: rgb(147, 160, 197);">避坑</a><a href="/tags/panic/" style="font-size: 1.15em; color: rgb(150, 117, 50);">panic</a><a href="/tags/recover/" style="font-size: 1.15em; color: rgb(83, 122, 184);">recover</a><a href="/tags/%E6%A0%87%E5%87%86%E5%BA%93/" style="font-size: 1.15em; color: rgb(83, 50, 180);">标准库</a><a href="/tags/context/" style="font-size: 1.15em; color: rgb(117, 107, 175);">context</a><a href="/tags/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D/" style="font-size: 1.15em; color: rgb(50, 50, 164);">中文分词</a><a href="/tags/%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/" style="font-size: 1.15em; color: rgb(50, 86, 133);">最大匹配算法</a><a href="/tags/NLP/" style="font-size: 1.15em; color: rgb(196, 82, 183);">NLP</a><a href="/tags/GoFrame/" style="font-size: 1.15em; color: rgb(160, 50, 114);">GoFrame</a><a href="/tags/PHP/" style="font-size: 1.15em; color: rgb(197, 74, 50);">PHP</a><a href="/tags/%E8%B8%A9%E5%9D%91/" style="font-size: 1.15em; color: rgb(99, 185, 50);">踩坑</a><a href="/tags/AI/" style="font-size: 1.45em; color: rgb(131, 169, 50);">AI</a><a href="/tags/Agent/" style="font-size: 1.45em; color: rgb(50, 130, 50);">Agent</a><a href="/tags/RAG/" style="font-size: 1.3em; color: rgb(110, 50, 174);">RAG</a><a href="/tags/Claude-Code/" style="font-size: 1.15em; color: rgb(197, 148, 126);">Claude Code</a><a href="/tags/LLM-Wiki/" style="font-size: 1.15em; color: rgb(50, 50, 134);">LLM Wiki</a><a href="/tags/%E7%9F%A5%E8%AF%86%E7%AE%A1%E7%90%86/" style="font-size: 1.15em; color: rgb(79, 62, 55);">知识管理</a><a href="/tags/%E9%9A%8F%E7%AC%94/" style="font-size: 1.15em; color: rgb(176, 82, 162);">随笔</a><a href="/tags/%E7%94%9F%E6%B4%BB/" style="font-size: 1.15em; color: rgb(50, 50, 50);">生活</a><a href="/tags/ACM/" style="font-size: 1.15em; color: rgb(76, 122, 97);">ACM</a><a href="/tags/Claude/" style="font-size: 1.3em; color: rgb(124, 50, 50);">Claude</a><a href="/tags/%E7%BF%BB%E8%AF%91/" style="font-size: 1.15em; color: rgb(73, 50, 132);">翻译</a></div></div><div class="card-widget card-archives">
-    <div class="item-headline">
-      <i class="fas fa-archive"></i>
-      <span>归档</span>
-      
+    
+            
+    
+            
+                
+                    <link rel="stylesheet" href="/css/redefine-custom.css?v=20261119t">
+                
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"yudongyouqing.github.io","root":"/","language":"zh-CN","path":"search.xml"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.75,"image_border_radius":"12px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"2.8rem","h2":"2.2rem","h3":"1.8rem","h4":"1.5rem","h5":"1.3rem","h6":"1.2rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":false,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"tokyo-night-dark"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":false,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/home-sunset.jpg","skip_dirs":[]}},"colors":{"primary":"#0F766E","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1080px","sidebar_width":"220px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":true,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/home-sunset.jpg","description":"Golang 后端开发 / 技术爱好者 · 记录技术学习、调试经验和文档收藏"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/home-sunset.jpg","dark":"/images/home-sunset.jpg"},"title":"Can you feel my world","subtitle":{"text":["充满鲜花的世界到底在哪里","如果它真的存在那么我一定会去"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":95,"backing_speed":65,"starting_delay":400,"backing_delay":1800,"loop":true,"smart_backspace":true},"text_color":{"light":"#ffffff","dark":"#e5e7eb"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.35rem","line_height":1.25},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"center","links":[{"icon":"fa-brands fa-github","url":"https://github.com/yudongyouqing"},{"icon":"fa-brands fa-twitter","url":null},{"icon":"fa-solid fa-at","url":null},{"icon":"fa-brands fa-telegram","url":null},{"icon":"/images/custom-icon.svg","url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":true},"aplayer":{"enable":false,"type":"mini","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#0f766e","right":"#d97706","transparency":35},"width":{"home":"1200px","pages":"1080px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"归档":{"path":"/archives/","icon":"fa-regular fa-archive"},"分类":{"path":"/categories/","icon":"fa-regular fa-folder"},"说说":{"path":"/talking/","icon":"fa-regular fa-comment-dots"},"文档收藏":{"path":"/webdocs/","icon":"fa-regular fa-bookmark"},"更多":{"icon":"fa-regular fa-compass","submenus":{"标签":"/tags/","图库":"/gallery/","留言板":"/messageboard/","关于":"/about/"}}},"search":{"enable":true,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"blur","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"info","announcement":"","show_on_mobile":true,"links":{"归档":{"path":"/archives/","icon":"fa-regular fa-archive"},"分类":{"path":"/categories/","icon":"fa-regular fa-folder"},"标签":{"path":"/tags/","icon":"fa-solid fa-tags"},"文档收藏":{"path":"/webdocs/","icon":"fa-regular fa-bookmark"},"关于":{"path":"/about/","icon":"fa-regular fa-user"}}},"article_date_format":"YYYY-MM-DD","excerpt_length":160,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":4}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart\" style=\"color: #0f766e\"></i>","start":"2026/01/22 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2026/01/22 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.1"><link rel="alternate" href="/atom.xml" title="Can you feel my world" type="application/atom+xml">
+</head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+	<span class="scroll-progress-bar"></span>
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+	
+    <style>
+        .home-banner-container {
+            background: none !important;
+        }
+        .home-article-item,
+        .sidebar-links,
+        .sidebar-content,
+        a.page-number,
+        a.extend,
+        .sidebar-links .links:hover,
+        .right-bottom-tools,
+        footer.footer {
+            background-color: var(--background-color-transparent-80) !important;
+        }
+        .right-bottom-tools:hover,
+        a.page-number:hover,
+        a.extend:hover {
+            background-color: var(--primary-color) !important;
+        }
+        .site-info,
+        .home-article-sticky-label {
+            background-color: var(--background-color-transparent-15) !important;
+        }
+        .home-article-sticky-label {
+            backdrop-filter: none !important;
+        }
+    </style>
+    <div class="home-banner-background transition-fade fixed top-0 left-0 w-screen h-screen scale-125 sm:scale-110 box-border will-change-transform bg-cover">
+        <img src="/images/home-sunset.jpg" alt="home-banner-background" class="w-full h-full object-cover dark:hidden">
+        <img src="/images/home-sunset.jpg" alt="home-banner-background" class="w-full h-full object-cover hidden dark:block">
     </div>
-  
-    <ul class="card-archive-list">
-      
-        <li class="card-archive-list-item">
-          <a class="card-archive-list-link" href="/archives/2026/11/">
-            <span class="card-archive-list-date">
-              十一月 2026
+
+
+<div class="home-banner-container flex justify-center items-center transition-fade relative">
+    
+    <div class="content mt-8 flex flex-col justify-center items-center transition-fade-down">
+        <div class="description flex flex-col justify-center items-center w-screen font-medium text-center"
+        
+        >
+            Can you feel my world
+            
+            
+            
+            
+            
+                <p><i id="subtitle"></i></p>
+            
+        </div>
+        
+            
+            <div class="absolute bottom-0.5 flex flex-row justify-center max-w-[1340px] items-center w-full px-8 sm:px-12">
+                <div class="hidden p-3 bg-gray-300/50 dark:bg-gray-500/40 backdrop-blur-lg border border-white/20 dark:border-gray-500/30 group rounded-full cursor-pointer flex justify-center items-center aspect-square h-full shadow-redefine-flat hover:shadow-redefine-flat-hover transition-shadow" onclick="scrollToMain()" >
+                    <i class="fa-solid fa-arrow-down fa-fw fa-lg group-hover:translate-y-1 transition-transform"></i>
+                </div>
+                <div class="social-contacts px-6 py-3 bg-gray-300/50 dark:bg-gray-500/40 backdrop-blur-lg border border-white/20 dark:border-gray-500/30 shadow-redefine-flat rounded-full flex flex-row gap-3 items-center">
+                    
+                        
+                            
+                            
+                            
+                            
+                            
+                            
+                                <span class="social-contact-item">
+                                    <a target="_blank" href="https://github.com/yudongyouqing">
+                                        <i class="fa-brands fa-github fa-fw fa-lg"></i>
+                                    </a>
+                                </span>
+                            
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                        
+                    
+                    
+                </div>
+            </div>
+        
+    </div>
+    <style>
+        /* Mobile-specific QR code styles */
+        .qr-toggle-item.qr-active .qr-popup {
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+        
+        /* Prevent button from staying in focus/hover state on mobile */
+        @media (hover: none) and (pointer: coarse) {
+            .qr-toggle-item:focus,
+            .qr-toggle-item:hover {
+                background-color: transparent;
+            }
+            
+            .qr-toggle-item .qr-trigger:focus,
+            .qr-toggle-item .qr-trigger:hover {
+                background-color: transparent;
+                color: inherit;
+            }
+            
+            /* Only show active state when explicitly toggled */
+            .qr-popup {
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+        }
+    </style>
+</div>
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar has-home-banner">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                <h1>
+                Can you feel my world
+                </h1>
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class="active"
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives/"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories/"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/talking/"
+                                        >
+                                    <i class="fa-regular fa-comment-dots fa-fw"></i>
+                                    说说
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/webdocs/"
+                                        >
+                                    <i class="fa-regular fa-bookmark fa-fw"></i>
+                                    文档收藏
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class="has-dropdown"
+                                   href="#"
+                                        onClick=&#34;return false;&#34;>
+                                    <i class="fa-regular fa-compass fa-fw"></i>
+                                    更多
+                                    <i class="fa-solid fa-chevron-down fa-fw"></i>
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                                    <ul class="sub-menu">
+                                        
+                                            <li>
+                                                <a href="/tags/">
+                                                    标签
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/gallery/">
+                                                    图库
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/messageboard/">
+                                                    留言板
+                                                </a>
+                                            </li>
+                                        
+                                            <li>
+                                                <a href="/about/">
+                                                    关于
+                                                </a>
+                                            </li>
+                                        
+                                    </ul>
+                                
+                            </li>
+                    
+                    
+                        <li class="navbar-item search search-popup-trigger">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </li>
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                    <div class="icon-item search search-popup-trigger"><i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives/"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories/"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/talking/"
+                        >
+                            <span>
+                                说说
+                            </span>
+                            
+                                <i class="fa-regular fa-comment-dots fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/webdocs/"
+                        >
+                            <span>
+                                文档收藏
+                            </span>
+                            
+                                <i class="fa-regular fa-bookmark fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item-sub text-base my-1.5 flex flex-col w-full">
+                        
+                        <div class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary cursor-pointer text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                             navbar-data-toggle="submenu-更多"
+                        >
+                            <span>
+                                更多
+                            </span>
+                            
+                                <i class="fa-solid fa-chevron-right fa-sm fa-fw transition-all"></i>
+                            
+                        </div>
+                        
+
+                        
+                            <div class="flex-col items-start px-2 py-2 hidden" data-target="submenu-更多">
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/tags/">标签</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/gallery/">图库</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/messageboard/">留言板</a>
+                                    </div>
+                                
+                                    <div class="drawer-navbar-item text-base flex flex-col justify-center items-start hover:underline active:underline hover:underline-offset-1 rounded-3xl">
+                                        <a class=" text-third-text-color text-xl"
+                                           href="/about/">关于</a>
+                                    </div>
+                                
+                            </div>
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                           href="/tags/"
+                        >
+                            <span>标签</span>
+                            <i class="fa-solid fa-tags fa-sm fa-fw"></i>
+                        </a>
+                    </li>
+                
+                    
+                    
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                           href="/about/"
+                        >
+                            <span>关于</span>
+                            <i class="fa-regular fa-user fa-sm fa-fw"></i>
+                        </a>
+                    </li>
+                
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">27</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">6</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">10</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+			<div class="home-sidebar-container">
+    <div class="sticky-container sticky">
+        
+        
+            <div class="sidebar-content">
+                <div class="avatar flex justify-center">
+    <img src="/images/avatar.jpg">
+</div>
+                <div class="author flex flex-col justify-center my-2.5 mx-0">
+    <div class="name">clearlove13</div>
+    
+</div>
+                <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">27</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">6</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">10</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+            </div>
+            
+                <div class="sidebar-links"   marginTop >
+                    <div class="site-info">
+                        <div class="site-name">Can you feel my world</div>
+                        
+                            <div class="announcement">
+                                
+                            </div>
+                        
+                    </div>
+                    
+                        
+                            
+                                <a class="links" href="/archives/">
+                                    
+                                        <i class="fa-regular fa-archive icon-space"></i>
+                                    
+                                    <span class="link-name">归档</span>
+                                </a>
+                            
+                        
+                            
+                                <a class="links" href="/categories/">
+                                    
+                                        <i class="fa-regular fa-folder icon-space"></i>
+                                    
+                                    <span class="link-name">分类</span>
+                                </a>
+                            
+                        
+                            
+                                <a class="links" href="/tags/">
+                                    
+                                        <i class="fa-solid fa-tags icon-space"></i>
+                                    
+                                    <span class="link-name">标签</span>
+                                </a>
+                            
+                        
+                            
+                                <a class="links" href="/webdocs/">
+                                    
+                                        <i class="fa-regular fa-bookmark icon-space"></i>
+                                    
+                                    <span class="link-name">文档收藏</span>
+                                </a>
+                            
+                        
+                            
+                                <a class="links" href="/about/">
+                                    
+                                        <i class="fa-regular fa-user icon-space"></i>
+                                    
+                                    <span class="link-name">关于</span>
+                                </a>
+                            
+                        
+                    
+                </div>
+            
+        
+
+    </div>
+</div>
+
+			
+
+			<div class="main-content">
+				<div class="home-content-container">
+    <ul class="home-article-list">
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/11/16/claude-memory-takeaways/">
+                            <img src="/2026/11/16/claude-memory-takeaways/cover.webp" alt="Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/11/16/claude-memory-takeaways/">
+                            Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>Anthropic 十一月初发了一篇讲智能体记忆的文章，说了一件挺根本的事：Claude 要从经验里学习，就必须在<strong>不知道未来会发生什么</strong>的时候，先决定什么值得记住。全文翻译放在<a href="/2026/11/13/agent-memory-components/">这里</a>（双语对照，带原文全部引用链接）。</p>
+<p>这篇不重复原文内容，只写我自己的三个收获和一个联想。都是我看完之后过了几天还留在脑子里的东西。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Mon Nov 16 2026 09:24:01 GMT+0800">
+                
+                    2026-11-16
+                
             </span>
-            <span class="card-archive-list-count">1</span>
-          </a>
-        </li>
-      
-        <li class="card-archive-list-item">
-          <a class="card-archive-list-link" href="/archives/2026/10/">
-            <span class="card-archive-list-date">
-              十月 2026
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/Agent/">Agent</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/Claude/">Claude</a>&nbsp;
+                        </li>
+                    
+                </ul>
             </span>
-            <span class="card-archive-list-count">2</span>
-          </a>
-        </li>
-      
-        <li class="card-archive-list-item">
-          <a class="card-archive-list-link" href="/archives/2026/06/">
-            <span class="card-archive-list-date">
-              六月 2026
+        
+    </div>
+
+    <a href="/2026/11/16/claude-memory-takeaways/">阅读全文<span class="seo-reader-text">Claude 的记忆系统：显著性、做梦，和 MEMORY.md 的前 200 行</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/10/20/goframe-indexed-array-binding/">
+                            <img src="/2026/10/20/goframe-indexed-array-binding/cover.webp" alt="GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/10/20/goframe-indexed-array-binding/">
+                            GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>同一个请求，PHP 侧筛选出 0 条，Go 侧返回 1 条。参数等于没传，而且接口不报错、日志无异常、返回 200。</p>
+<p>这是我最近把一个 PHP(Laravel 6) 系统迁到 Go(GoFrame v2.10.0) 时遇到的真实分叉。排查到最后，我的结论是：<strong>GoFrame 对带索引数组参数（<code>ids[0]=1&amp;ids[1]=2</code>）是「半吊子支持」——解析层认了，结构体绑定层把它无声丢弃。这比完全不支持更坑</strong>，因为你能在 <code>GetQueryMap()</code> 里亲眼看到数据，却怎么都绑不进结构体字段。</p>
+<p>这篇文章记录完整的三层排查、三形态实测数据和最终方案的取舍过程。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Tue Oct 20 2026 16:22:49 GMT+0800">
+                
+                    2026-10-20
+                
             </span>
-            <span class="card-archive-list-count">2</span>
-          </a>
-        </li>
-      
-        <li class="card-archive-list-item">
-          <a class="card-archive-list-link" href="/archives/2026/05/">
-            <span class="card-archive-list-date">
-              五月 2026
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/GoFrame/">GoFrame</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/PHP/">PHP</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E8%B8%A9%E5%9D%91/">踩坑</a>&nbsp;
+                        </li>
+                    
+                </ul>
             </span>
-            <span class="card-archive-list-count">2</span>
-          </a>
-        </li>
-      
-        <li class="card-archive-list-item">
-          <a class="card-archive-list-link" href="/archives/2026/01/">
-            <span class="card-archive-list-date">
-              一月 2026
+        
+    </div>
+
+    <a href="/2026/10/20/goframe-indexed-array-binding/">阅读全文<span class="seo-reader-text">GoFrame 数组参数静默绑定失败：比不支持更坑的半吊子支持</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/10/20/go-defer/">
+                            <img src="/2026/10/20/go-defer/cover.webp" alt="Go 语言中的 defer：常见用法与避坑指南" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/10/20/go-defer/">
+                            Go 语言中的 defer：常见用法与避坑指南
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>写 Go 的人几乎每天都在用 <code>defer</code>：打开文件要 <code>Close</code>，加了锁要 <code>Unlock</code>，拿到 HTTP 响应要 <code>Body.Close()</code>。它看起来只是个「延迟执行」的关键字，但它的求值时机、执行顺序、以及和 <code>return</code> 的配合方式，都有一套非常明确的规则。不了解这些规则，很容易写出「资源迟迟不释放」「锁根本没加上」「拿到的永远是旧值」这类隐蔽 bug。</p>
+<p>本文先把 <code>defer</code> 的三条核心规则讲清楚，再过一遍高频用法，最后按「坑」逐条排查，每一条都配上可直接运行的最小示例。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Tue Oct 20 2026 15:34:00 GMT+0800">
+                
+                    2026-10-20
+                
             </span>
-            <span class="card-archive-list-count">3</span>
-          </a>
-        </li>
-      
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/defer/">defer</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E9%81%BF%E5%9D%91/">避坑</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/10/20/go-defer/">阅读全文<span class="seo-reader-text">Go 语言中的 defer：常见用法与避坑指南</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/">
+                            <img src="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/cover.webp" alt="一个流水水水水账" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/">
+                            一个流水水水水账
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            
+                            在飞机上不知道干什么，忽然想起来自己之前嚷嚷着要写一下大作文，因为自己两星期之后就21岁了，却还没有象征性得写过阶段性大作文
+既然写自传文章，那我还是从最近发生的开始写吧，因为过去的事情大多我已记不太清了，所以有些地方写的简略一点在所难免
+就从打重庆开始说起吧，其实我本来是没有想过打重庆的，因为毕竟太远了，加上也...
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Tue Jun 16 2026 00:00:00 GMT+0800">
+                
+                    2026-06-16
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/%E9%9A%8F%E7%AC%94/">随笔</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E7%94%9F%E6%B4%BB/">生活</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/ACM/">ACM</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/06/16/yi-ge-liu-shui-shui-shui-zhang/">阅读全文<span class="seo-reader-text">一个流水水水水账</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/">
+                            <img src="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/cover.webp" alt="中文分词-最大匹配算法" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/">
+                            中文分词-最大匹配算法
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <h1 id="1-最大匹配算法"><a href="#1-最大匹配算法" class="headerlink" title="1. 最大匹配算法"></a>1. 最大匹配算法</h1><p>最大匹配法是指通过词典进行单向分词，优先选择词的长度，逐步对句子扫描分词</p>
+<p>我们举个从左向右的例子</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Thu Jun 04 2026 21:31:33 GMT+0800">
+                
+                    2026-06-04
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E7%AE%97%E6%B3%95/">算法</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/C/">C++</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D/">中文分词</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/">最大匹配算法</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/NLP/">NLP</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/06/04/%E4%B8%AD%E6%96%87%E5%88%86%E8%AF%8D-%E6%9C%80%E5%A4%A7%E5%8C%B9%E9%85%8D%E7%AE%97%E6%B3%95/">阅读全文<span class="seo-reader-text">中文分词-最大匹配算法</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/05/25/llm-wiki-agent-knowledge-layer/">
+                            <img src="/2026/05/25/llm-wiki-agent-knowledge-layer/cover.webp" alt="LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/05/25/llm-wiki-agent-knowledge-layer/">
+                            LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>原文链接：<a class="link"   target="_blank" rel="noopener" href="https://www.cnblogs.com/jtuki/p/19861920" >用 Karpathy LLM Wiki 方法论，为 AI Agent 系统构建结构化知识层<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></p>
+<p>这篇文章讲的不是“再做一个知识库”，而是把知识库当成 Agent 系统的长期知识层来设计。它的核心启发是：企业知识不应该只停留在一堆文档、网页收藏、聊天记录里，而应该被整理成可检索、可链接、可更新的结构化 Wiki。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Mon May 25 2026 14:42:31 GMT+0800">
+                
+                    2026-05-25
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/Agent/">Agent</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/RAG/">RAG</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/LLM-Wiki/">LLM Wiki</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/05/25/llm-wiki-agent-knowledge-layer/">阅读全文<span class="seo-reader-text">LLM Wiki 与 Agent 知识层：从零散资料到可持续进化的知识系统</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/05/25/rag-grep-claude-code/">
+                            <img src="/2026/05/25/rag-grep-claude-code/cover.webp" alt="Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/05/25/rag-grep-claude-code/">
+                            Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>原文链接：<a class="link"   target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/2028510583213835970" >RAG 已死？从 Claude Code 源码到行业实践看 Grep 的回归<i class="fa-solid fa-arrow-up-right ml-[0.2em] font-light align-text-top text-[0.7em] link-icon"></i></a></p>
+<p>这篇文章讨论的是一个很容易被标题带偏的问题：Claude Code 这类编程 Agent 为什么不一定需要传统 RAG？</p>
+<p>我的理解是，它并不是在说 RAG 彻底没用了，而是在说：对于代码库这种高度结构化、随时变化、天然可搜索的材料，<code>LLM + grep/ripgrep + 文件读取</code> 这种动态检索方式，很多时候比“提前切分、向量化、建索引”的传统 RAG 更直接。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Mon May 25 2026 13:23:36 GMT+0800">
+                
+                    2026-05-25
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/AI/">AI</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/Agent/">Agent</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/RAG/">RAG</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/Claude-Code/">Claude Code</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/05/25/rag-grep-claude-code/">阅读全文<span class="seo-reader-text">Claude Code 的检索方式：为什么 grep 可能比 RAG 更适合代码库</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/01/27/go-recover/">
+                            <img src="/2026/01/27/go-recover/cover.webp" alt="Go 里的 recover：如何优雅地兜底 panic（写给初学者）" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/01/27/go-recover/">
+                            Go 里的 recover：如何优雅地兜底 panic（写给初学者）
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>很多 Go 初学者第一次遇到 <code>panic</code> 都会很慌：程序直接崩了，错误信息一大堆。于是就会听到一句话：<strong>用 <code>recover</code> 可以救回来</strong>。</p>
+<p>但 <code>recover</code> 并不是“哪里都能用”的万能药，它有非常明确的触发条件和边界。本文用最小示例把 <code>panic / defer / recover</code> 的关系讲清楚，并列出常见坑和工程里正确的兜底方式。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Tue Jan 27 2026 22:00:00 GMT+0800">
+                
+                    2026-01-27
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/defer/">defer</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/panic/">panic</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/recover/">recover</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/01/27/go-recover/">阅读全文<span class="seo-reader-text">Go 里的 recover：如何优雅地兜底 panic（写给初学者）</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/01/23/go-context/">
+                            <img src="/2026/01/23/go-context/cover.webp" alt="Go标准库中的context包" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/01/23/go-context/">
+                            Go标准库中的context包
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <p>本文总结了 Go 标准库中 <code>context</code> 的常见用法，包括创建、传递、取消、超时部分场景。</p>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Fri Jan 23 2026 21:30:00 GMT+0800">
+                
+                    2026-01-23
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/Go/">Go</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E6%A0%87%E5%87%86%E5%BA%93/">标准库</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/context/">context</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/01/23/go-context/">阅读全文<span class="seo-reader-text">Go标准库中的context包</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
+            <li class="home-article-item">
+
+                
+
+                
+                    
+                
+
+                
+                    <div id="home-article-thumbnail" class="home-article-thumbnail relative h-[150px] overflow-hidden rounded-t-large">
+                        <a href="/2026/01/22/debug-leetcode-auto-include/">
+                            <img src="/2026/01/22/debug-leetcode-auto-include/cover.webp" alt="调试 LeetCode 之 “一键补全头文件” 超简教程" class="w-full h-full object-cover dark:brightness-75 transition-all" />
+                        </a>
+                    </div>
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-5">
+                    <h3 class="home-article-title">
+                        <a href="/2026/01/22/debug-leetcode-auto-include/">
+                            调试 LeetCode 之 “一键补全头文件” 超简教程
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            <blockquote>
+<p>本文 100% 亲测有效，3 步解决 <em>#include &lt;bits&#x2F;stdc++.h&gt;</em> 标红、<code>commoncppproblem2.h</code> 找不到等 IDE 烦恼。  </p>
+</blockquote>
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Thu Jan 22 2026 14:27:09 GMT+0800">
+                
+                    2026-01-22
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E5%88%B7%E9%A2%98/">刷题</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/LeetCode/">LeetCode</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/VSCode/">VSCode</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/C/">C++</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/01/22/debug-leetcode-auto-include/">阅读全文<span class="seo-reader-text">调试 LeetCode 之 “一键补全头文件” 超简教程</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
+        
     </ul>
-  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">10</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总浏览量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-11-16T08:09:30.423Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/images/home-sunset.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2026 By clearlove13</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.1</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>window.typedJSFn = {
-  init: str => {
-    window.typed = new Typed('#subtitle', Object.assign({
-      strings: str,
-      startDelay: 300,
-      typeSpeed: 150,
-      loop: true,
-      backSpeed: 50,
-    }, null))
-  },
-  run: subtitleType => {
-    if (true) {
-      if (typeof Typed === 'function') {
-        subtitleType()
-      } else {
-        btf.getScript('https://cdn.jsdelivr.net/npm/typed.js@3.0.0/dist/typed.umd.min.js').then(subtitleType)
-      }
-    } else {
-      subtitleType()
-    }
-  },
-  processSubtitle: (content, extraContents = []) => {
-    if (true) {
-      const sub = ["充满鲜花的世界到底在哪里","如果他真的存在那么我一定会去"].slice()
 
-      if (extraContents.length > 0) {
-        sub.unshift(...extraContents)
-      }
+    <div class="home-paginator px-7 py-5">
+        <div class="paginator">
+	<span class="page-number current">1</span>
+</div>
+  
+    </div>
+</div>
 
-      if (typeof content === 'string') {
-        sub.unshift(content)
-      } else if (Array.isArray(content)) {
-        sub.unshift(...content)
-      }
+			</div>
 
-      sub.length > 0 && typedJSFn.init(sub)
-    } else {
-      document.getElementById('subtitle').textContent = typeof content === 'string' ? content :
-        (Array.isArray(content) && content.length > 0 ? content[0] : '')
-    }
-  }
-}
-btf.addGlobalFn('pjaxSendOnce', () => { typed.destroy() }, 'typedDestroy')
-</script><script>function subtitleType () {
-  typedJSFn.processSubtitle(["充满鲜花的世界到底在哪里","如果他真的存在那么我一定会去"])
-}
-typedJSFn.run(subtitleType)</script></div><script src="/js/footer-bg.js"></script><script src="/js/tag-cloud.js?v=20261113c"></script><script src="/js/readmode-extras.js?v=20261113c"></script><script src="/js/music-player.js?v=20260617-cover"></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
-  const pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","meta[property=\"og:description\"]","link[rel=\"canonical\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+			
+		</div>
 
-  window.pjax = new Pjax({
-    elements: 'a:not([target="_blank"])',
-    selectors: pjaxSelectors,
-    cacheBust: false,
-    analytics: false,
-    scrollRestoration: false
-  })
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2026</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart" style="color: #0f766e"></i>&nbsp;&nbsp;<a href="/">clearlove13</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 10 篇文章
+                    </span>
+                    
+                        <span>
+                            共 16k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script async data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+            
+                
+        
+                
+        
+                
 
-  const triggerPjaxFn = (val) => {
-    if (!val) return
-    Object.values(val).forEach(fn => {
-      try {
-        fn()
-      } catch (err) {
-        console.debug('Pjax callback failed:', err)
-      }
-    })
-  }
+                    
+                        <script data-swup-reload-script src="/js/redefine-compat.js?v=20261119f"></script>
+                    
+        
+                
 
-  document.addEventListener('pjax:send', () => {
-    // removeEventListener
-    btf.removeGlobalFnEvent('pjaxSendOnce')
-    btf.removeGlobalFnEvent('themeChange')
+                    
+                        <script data-swup-reload-script src="/js/tag-cloud.js?v=orb7"></script>
+                    
+        
+                
 
-    // reset readmode
-    const $bodyClassList = document.body.classList
-    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+                    
+                        <script data-swup-reload-script src="/js/music-player.js?v=20261119"></script>
+                    
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
 
-    triggerPjaxFn(window.globalFn.pjaxSend)
-  })
+	
 
-  document.addEventListener('pjax:complete', () => {
-    btf.removeGlobalFnEvent('pjaxCompleteOnce')
-    document.querySelectorAll('script[data-pjax]').forEach(item => {
-      const newScript = document.createElement('script')
-      const content = item.text || item.textContent || item.innerHTML || ""
-      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
-      newScript.appendChild(document.createTextNode(content))
-      item.parentNode.replaceChild(newScript, item)
-    })
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
 
-    triggerPjaxFn(window.globalFn.pjaxComplete)
-  })
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
 
-  document.addEventListener('pjax:error', e => {
-    if (e.request.status === 404) {
-      false
-        ? pjax.loadUrl('/404.html')
-        : window.location.href = e.request.responseURL
-    }
-  })
-})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+		<li class="right-bottom-tools rss flex justify-center items-center">
+			<a class="flex justify-center items-center" href="/atom.xml" target="_blank">
+				<i class="fa-regular fa-rss"></i>
+			</a>
+		</li>
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+	<div class="search-pop-overlay">
+	<div class="popup search-popup">
+		<div class="search-header">
+			<span class="search-input-field-pre">
+				<i class="fa-solid fa-keyboard"></i>
+			</span>
+			<div class="search-input-container">
+				<input autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="站内搜索您需要的内容..." spellcheck="false" type="search" class="search-input">
+			</div>
+			<span class="popup-btn-close">
+				<i class="fa-solid fa-times"></i>
+			</span>
+		</div>
+		<div id="search-result">
+			<div id="no-result">
+				<i class="fa-solid fa-spinner fa-spin-pulse fa-5x fa-fw"></i>
+			</div>
+		</div>
+	</div>
+</div>
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>
